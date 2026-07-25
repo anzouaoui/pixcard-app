@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1088790397048",
+    "project_id": "pixcard-4a525",
+    "storage_bucket": "pixcard-4a525.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1088790397048:android:7607562934ae5cf89ead8d",
+        "android_client_info": {
+          "package_name": "com.devmobflutterflow.pixcard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArcKkDkOdX6F2qvptEML2w5kzC2vkLIpA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
