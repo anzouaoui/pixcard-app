@@ -70,6 +70,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> signInWithApple() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final user = await _ref.read(authRepositoryProvider).signInWithApple();
+      state = state.copyWith(user: user, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _ref.read(authRepositoryProvider).sendPasswordResetEmail(email);
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
   Future<void> signOut() async {
     await _ref.read(authRepositoryProvider).signOut();
     state = state.copyWith(clearUser: true);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
+import 'package:pixcard/presentation/widgets/apple_logo.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -69,7 +70,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: const InputDecoration(labelText: 'Mot de passe'),
                   validator: (v) => v != null && v.length >= 6 ? null : '6 caractères minimum',
                 ),
-                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot-password'),
+                    child: const Text('Mot de passe oublié ?'),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: authState.isLoading
                       ? null
@@ -92,6 +100,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : () => ref.read(authStateProvider.notifier).signInWithGoogle(),
                   icon: const Icon(Icons.g_mobiledata, size: 24),
                   label: const Text('Continuer avec Google'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: authState.isLoading
+                      ? null
+                      : () => ref.read(authStateProvider.notifier).signInWithApple(),
+                  icon: const AppleLogo(size: 20),
+                  label: const Text('Continuer avec Apple'),
                 ),
                 const SizedBox(height: 16),
                 TextButton(

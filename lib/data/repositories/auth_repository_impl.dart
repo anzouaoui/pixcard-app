@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
 import 'package:pixcard/domain/repositories/auth_repository.dart';
 
@@ -90,6 +91,42 @@ class AuthRepositoryImpl implements AuthRepository {
       displayName: user.displayName ?? '',
       photoUrl: user.photoURL ?? '',
     );
+  }
+
+  @override
+  Future<AppUser> signInWithApple() async {
+    final appleCredential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+    );
+
+    final oauthCredential = OAuthProvider('apple.com').credential(
+      idToken: appleCredential.identityToken,
+      accessToken: appleCredential.authorizationCode,
+    );
+
+    final userCredential = await _firebaseAuth.signInWithCredential(oauthCredential);
+    final user = userCredential.user!;
+
+    // Apple only provides name on first sign-in
+    final fullName = appleCredential.givenName;
+    if (fullName != null && user.displayName == null) {
+      await user.updateDisplayName(fullName);
+    }
+
+    return AppUser(
+      id: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName ?? fullName ?? '',
+      photoUrl: user.photoURL ?? '',
+    );
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _firebaseAuth.sendPasswordResetEmail(email: email);
   }
 
   @override

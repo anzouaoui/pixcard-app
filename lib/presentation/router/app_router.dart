@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pixcard/presentation/auth/forgot_password_screen.dart';
 import 'package:pixcard/presentation/auth/login_screen.dart';
 import 'package:pixcard/presentation/auth/register_screen.dart';
 import 'package:pixcard/presentation/create_listing/create_listing_screen.dart';
@@ -23,16 +24,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
 
-      // Onboarding not done: force onboarding screen
       if (!onboardingDone && location != '/onboarding') return '/onboarding';
 
-      // Onboarding done but still on onboarding: redirect
       if (onboardingDone && location == '/onboarding') {
         return authState.isAuthenticated ? '/' : '/login';
       }
 
       final isAuthenticated = authState.isAuthenticated;
-      final isAuthRoute = location == '/login' || location == '/register';
+      final isAuthRoute = location == '/login' ||
+          location == '/register' ||
+          location == '/forgot-password';
 
       if (!isAuthenticated && !isAuthRoute && location != '/onboarding') {
         return '/login';
@@ -52,6 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (_, _s) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _s) => const RegisterScreen()),
+      GoRoute(path: '/forgot-password', builder: (_, _s) => const ForgotPasswordScreen()),
       GoRoute(path: '/listing/:id', builder: (_, state) => ListingDetailScreen(id: state.pathParameters['id']!)),
       GoRoute(path: '/create-listing', builder: (_, _s) => const CreateListingScreen()),
     ],
