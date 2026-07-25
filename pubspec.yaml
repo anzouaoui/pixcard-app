@@ -1,0 +1,44 @@
+name: pixcard
+description: "Marketplace C2C pour cartes Pokémon TCG"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Firebase
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.1.0
+  cloud_firestore: ^6.1.0
+  firebase_storage: ^13.0.0
+  cloud_functions: ^6.3.5
+  firebase_messaging: ^16.0.0
+  firebase_analytics: ^12.0.0
+
+  # Auth
+  google_sign_in: ^6.2.2
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Monitoring
+  sentry_flutter: ^8.14.1
+
+  # UI
+  go_router: ^14.8.1
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

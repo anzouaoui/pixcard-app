@@ -1,0 +1,50 @@
+environment:
+  flutter: stable
+  xcode: latest
+  cocoapods: default
+
+artifacts:
+  build/ios/output/ipa/*.ipa
+  build/app/outputs/flutter-apk/*.apk
+
+scripts:
+  setup_signing:
+    name: Setup signing
+    script: |
+      # Android signing setup
+      echo $ANDROID_KEYSTORE_BASE64 | base64 --decode > android/app/keystore.jks
+    # iOS signing configured via Codemagic UI
+
+  build_android:
+    name: Build Android
+    script: |
+      flutter pub get
+      flutter analyze --no-fatal-infos
+      flutter build apk --release
+
+  build_ios:
+    name: Build iOS
+    script: |
+      flutter pub get
+      flutter analyze --no-fatal-infos
+      flutter build ipa --release --export-options-plist=/path/to/ExportOptions.plist
+
+max_build_duration: 60
+
+triggering:
+  events:
+    - push
+  branch_patterns:
+    - pattern: main
+      include: true
+      source: true
+
+upload_to_app_store_connect:
+  ios:
+    enabled: true
+    submit_as_test_flight: true
+  android:
+    enabled: true
+    upload_to_play_store:
+      enabled: true
+      track: internal
