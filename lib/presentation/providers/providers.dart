@@ -13,7 +13,10 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instan
 final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryImpl(ref.watch(firebaseAuthProvider));
+  return AuthRepositoryImpl(
+    ref.watch(firebaseAuthProvider),
+    ref.watch(firebaseFirestoreProvider),
+  );
 });
 
 final listingRepositoryProvider = Provider<ListingRepository>((ref) {

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -5,10 +6,17 @@ import 'package:pixcard/domain/entities/app_user.dart';
 import 'package:pixcard/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl(this._firebaseAuth);
+  AuthRepositoryImpl(this._firebaseAuth, this._firestore);
 
   final FirebaseAuth _firebaseAuth;
+  final FirebaseFirestore _firestore;
   final _googleSignIn = GoogleSignIn();
+
+  CollectionReference get _users => _firestore.collection('users');
+
+  Future<void> _createUserDoc(AppUser user) async {
+    await _users.doc(user.id).set(user.toMap());
+  }
 
   @override
   Stream<AppUser?> get authStateChanges {
@@ -65,11 +73,14 @@ class AuthRepositoryImpl implements AuthRepository {
     );
     final user = credential.user!;
     await user.updateDisplayName(displayName);
-    return AppUser(
+    final appUser = AppUser(
       id: user.uid,
       email: user.email ?? '',
       displayName: displayName,
+      createdAt: DateTime.now(),
     );
+    await _createUserDoc(appUser);
+    return appUser;
   }
 
   @override
@@ -85,12 +96,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
     final userCredential = await _firebaseAuth.signInWithCredential(credential);
     final user = userCredential.user!;
-    return AppUser(
+    final appUser = AppUser(
       id: user.uid,
       email: user.email ?? '',
       displayName: user.displayName ?? '',
       photoUrl: user.photoURL ?? '',
     );
+    final doc = await _users.doc(user.uid).get();
+    if (!doc.exists) await _createUserDoc(appUser);
+    return appUser;
   }
 
   @override
@@ -110,18 +124,20 @@ class AuthRepositoryImpl implements AuthRepository {
     final userCredential = await _firebaseAuth.signInWithCredential(oauthCredential);
     final user = userCredential.user!;
 
-    // Apple only provides name on first sign-in
     final fullName = appleCredential.givenName;
     if (fullName != null && user.displayName == null) {
       await user.updateDisplayName(fullName);
     }
 
-    return AppUser(
+    final appUser = AppUser(
       id: user.uid,
       email: user.email ?? '',
       displayName: user.displayName ?? fullName ?? '',
       photoUrl: user.photoURL ?? '',
     );
+    final doc = await _users.doc(user.uid).get();
+    if (!doc.exists) await _createUserDoc(appUser);
+    return appUser;
   }
 
   @override
