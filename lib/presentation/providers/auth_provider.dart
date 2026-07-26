@@ -26,9 +26,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   final Ref _ref;
+  bool _suppressAuthListener = false;
 
   void _listenToAuthChanges() {
     _ref.read(authRepositoryProvider).authStateChanges.listen((user) {
+      if (_suppressAuthListener) return;
       state = state.copyWith(user: user, clearUser: user == null);
     });
   }
@@ -47,6 +49,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signUpWithEmail(String email, String password, String displayName) async {
+    _suppressAuthListener = true;
     state = state.copyWith(isLoading: true);
     try {
       final user = await _ref.read(authRepositoryProvider).signUpWithEmail(
@@ -57,6 +60,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    } finally {
+      _suppressAuthListener = false;
     }
   }
 
