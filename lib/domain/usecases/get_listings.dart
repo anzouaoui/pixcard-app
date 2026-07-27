@@ -8,14 +8,14 @@ class GetListingsUseCase {
 
   Future<List<Listing>> call({
     String? game,
-    String? edition,
+    String? series,
     String? condition,
     double? minPrice,
     double? maxPrice,
   }) {
     return _repository.getListings(
       game: game,
-      edition: edition,
+      series: series,
       condition: condition,
       minPrice: minPrice,
       maxPrice: maxPrice,

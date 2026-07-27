@@ -28,10 +28,10 @@ class ProfileScreen extends ConsumerWidget {
                 Center(
                   child: CircleAvatar(
                     radius: 48,
-                    backgroundImage: user.photoUrl.isNotEmpty
-                        ? NetworkImage(user.photoUrl)
+                    backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                        ? NetworkImage(user.photoUrl!)
                         : null,
-                    child: user.photoUrl.isEmpty
+                    child: user.photoUrl == null || user.photoUrl!.isEmpty
                         ? Text(
                             user.displayName.isNotEmpty
                                 ? user.displayName[0].toUpperCase()

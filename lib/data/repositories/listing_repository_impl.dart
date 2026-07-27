@@ -12,7 +12,7 @@ class ListingRepositoryImpl implements ListingRepository {
   @override
   Future<List<Listing>> getListings({
     String? game,
-    String? edition,
+    String? series,
     String? condition,
     double? minPrice,
     double? maxPrice,
@@ -20,7 +20,7 @@ class ListingRepositoryImpl implements ListingRepository {
     Query query = _listings.where('status', isEqualTo: 'active');
 
     if (game != null) query = query.where('game', isEqualTo: game);
-    if (edition != null) query = query.where('edition', isEqualTo: edition);
+    if (series != null) query = query.where('series', isEqualTo: series);
     if (condition != null) query = query.where('condition', isEqualTo: condition);
     if (minPrice != null) query = query.where('price', isGreaterThanOrEqualTo: minPrice);
     if (maxPrice != null) query = query.where('price', isLessThanOrEqualTo: maxPrice);
@@ -28,7 +28,10 @@ class ListingRepositoryImpl implements ListingRepository {
     final snapshot = await query.orderBy('createdAt', descending: true).get();
 
     return snapshot.docs
-        .map((doc) => Listing.fromMap(doc.data() as Map<String, dynamic>))
+        .map((doc) => Listing.fromMap({
+              'id': doc.id,
+              ...doc.data() as Map<String, dynamic>,
+            }))
         .toList();
   }
 
@@ -36,24 +39,53 @@ class ListingRepositoryImpl implements ListingRepository {
   Future<Listing> getListingById(String id) async {
     final doc = await _listings.doc(id).get();
     if (!doc.exists) throw Exception('Listing not found');
-    return Listing.fromMap(doc.data() as Map<String, dynamic>);
+    return Listing.fromMap({
+      'id': doc.id,
+      ...doc.data() as Map<String, dynamic>,
+    });
   }
 
   @override
   Future<Listing> createListing(Listing listing) async {
     final docRef = _listings.doc();
-    final newListing = Listing.fromMap({
-      ...listing.toMap(),
-      'id': docRef.id,
-      'createdAt': DateTime.now().toIso8601String(),
-    });
+    final now = DateTime.now();
+    final newListing = Listing(
+      id: docRef.id,
+      sellerId: listing.sellerId,
+      cardName: listing.cardName,
+      game: listing.game,
+      series: listing.series,
+      condition: listing.condition,
+      price: listing.price,
+      marketPriceAvg: listing.marketPriceAvg,
+      description: listing.description,
+      imageUrl: listing.imageUrl,
+      status: listing.status,
+      createdAt: now,
+      updatedAt: now,
+    );
     await docRef.set(newListing.toMap());
     return newListing;
   }
 
   @override
   Future<void> updateListing(Listing listing) async {
-    await _listings.doc(listing.id).update(listing.toMap());
+    final updated = Listing(
+      id: listing.id,
+      sellerId: listing.sellerId,
+      cardName: listing.cardName,
+      game: listing.game,
+      series: listing.series,
+      condition: listing.condition,
+      price: listing.price,
+      marketPriceAvg: listing.marketPriceAvg,
+      description: listing.description,
+      imageUrl: listing.imageUrl,
+      status: listing.status,
+      createdAt: listing.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    await _listings.doc(listing.id).update(updated.toMap());
   }
 
   @override
@@ -69,7 +101,26 @@ class ListingRepositoryImpl implements ListingRepository {
         .get();
 
     return snapshot.docs
-        .map((doc) => Listing.fromMap(doc.data() as Map<String, dynamic>))
+        .map((doc) => Listing.fromMap({
+              'id': doc.id,
+              ...doc.data() as Map<String, dynamic>,
+            }))
         .toList();
+  }
+
+  @override
+  Stream<List<Listing>> watchListingsBySeller(String sellerId) {
+    return _listings
+        .where('sellerId', isEqualTo: sellerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Listing.fromMap({
+                    'id': doc.id,
+                    ...doc.data() as Map<String, dynamic>,
+                  }))
+              .toList(),
+        );
   }
 }

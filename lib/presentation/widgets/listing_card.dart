@@ -17,12 +17,12 @@ class ListingCard extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            if (listing.photos.isNotEmpty)
+            if (listing.imageUrl.isNotEmpty)
               SizedBox(
                 width: 100,
                 height: 100,
                 child: Image.network(
-                  listing.photos.first,
+                  listing.imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, url, error) => Container(
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -52,12 +52,12 @@ class ListingCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${listing.game} - ${listing.edition}',
+                      '${listing.game} - ${listing.series}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      listing.condition,
+                      listing.condition.name,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 4),

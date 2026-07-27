@@ -1,27 +1,32 @@
+enum MessageType { text, offer }
+
 class Message {
   const Message({
     required this.id,
     required this.senderId,
-    required this.receiverId,
-    required this.content,
-    this.isRead = false,
+    required this.type,
+    this.text,
+    this.offerId,
     this.createdAt,
   });
 
   final String id;
   final String senderId;
-  final String receiverId;
-  final String content;
-  final bool isRead;
+  final MessageType type;
+  final String? text;
+  final String? offerId;
   final DateTime? createdAt;
 
   factory Message.fromMap(Map<String, dynamic> map) {
     return Message(
       id: map['id'] as String? ?? '',
       senderId: map['senderId'] as String? ?? '',
-      receiverId: map['receiverId'] as String? ?? '',
-      content: map['content'] as String? ?? '',
-      isRead: map['isRead'] as bool? ?? false,
+      type: MessageType.values.firstWhere(
+        (e) => e.name == map['type'],
+        orElse: () => MessageType.text,
+      ),
+      text: map['text'] as String?,
+      offerId: map['offerId'] as String?,
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String)
           : null,
@@ -32,9 +37,9 @@ class Message {
     return {
       'id': id,
       'senderId': senderId,
-      'receiverId': receiverId,
-      'content': content,
-      'isRead': isRead,
+      'type': type.name,
+      'text': text,
+      'offerId': offerId,
       'createdAt': createdAt?.toIso8601String(),
     };
   }

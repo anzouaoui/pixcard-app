@@ -1,14 +1,13 @@
-enum TransactionStatus { pending, completed, cancelled }
+enum OfferStatus { pending, accepted, declined, expired }
 
-class AppTransaction {
-  const AppTransaction({
+class Offer {
+  const Offer({
     required this.id,
     required this.listingId,
     required this.buyerId,
     required this.sellerId,
     required this.amount,
-    required this.commission,
-    this.status = TransactionStatus.pending,
+    this.status = OfferStatus.pending,
     this.createdAt,
   });
 
@@ -17,21 +16,19 @@ class AppTransaction {
   final String buyerId;
   final String sellerId;
   final double amount;
-  final double commission;
-  final TransactionStatus status;
+  final OfferStatus status;
   final DateTime? createdAt;
 
-  factory AppTransaction.fromMap(Map<String, dynamic> map) {
-    return AppTransaction(
+  factory Offer.fromMap(Map<String, dynamic> map) {
+    return Offer(
       id: map['id'] as String? ?? '',
       listingId: map['listingId'] as String? ?? '',
       buyerId: map['buyerId'] as String? ?? '',
       sellerId: map['sellerId'] as String? ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
-      commission: (map['commission'] as num?)?.toDouble() ?? 0,
-      status: TransactionStatus.values.firstWhere(
+      status: OfferStatus.values.firstWhere(
         (e) => e.name == map['status'],
-        orElse: () => TransactionStatus.pending,
+        orElse: () => OfferStatus.pending,
       ),
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String)
@@ -46,7 +43,6 @@ class AppTransaction {
       'buyerId': buyerId,
       'sellerId': sellerId,
       'amount': amount,
-      'commission': commission,
       'status': status.name,
       'createdAt': createdAt?.toIso8601String(),
     };
