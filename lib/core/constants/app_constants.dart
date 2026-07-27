@@ -7,8 +7,12 @@ class AppConstants {
   // Firestore collections
   static const String usersCollection = 'users';
   static const String listingsCollection = 'listings';
-  static const String transactionsCollection = 'transactions';
-  static const String messagesCollection = 'messages';
+  static const String offersCollection = 'offers';
+  static const String conversationsCollection = 'conversations';
+  static const String messagesSubcollection = 'messages'; // conversations/{id}/messages
+  static const String ordersCollection = 'orders';
+  static const String reviewsCollection = 'reviews';
+  static const String favoritesSubcollection = 'favorites'; // users/{id}/favorites
 
   // Platform commission
   static const double platformCommissionPercent = 5.0;

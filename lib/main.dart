@@ -18,12 +18,7 @@ Future<void> main() async {
     appRunner: () async {
       WidgetsFlutterBinding.ensureInitialized();
       await Firebase.initializeApp();
-
-      runZonedGuarded(() {
-        runApp(const ProviderScope(child: PixCardApp()));
-      }, (error, stackTrace) {
-        Sentry.captureException(error, stackTrace: stackTrace);
-      });
+      runApp(const ProviderScope(child: PixCardApp()));
     },
   );
 }

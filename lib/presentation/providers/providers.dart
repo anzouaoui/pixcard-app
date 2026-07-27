@@ -4,9 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pixcard/data/repositories/auth_repository_impl.dart';
 import 'package:pixcard/data/repositories/listing_repository_impl.dart';
 import 'package:pixcard/data/repositories/user_repository_impl.dart';
+import 'package:pixcard/data/repositories/offer_repository_impl.dart';
+import 'package:pixcard/data/repositories/conversation_repository_impl.dart';
+import 'package:pixcard/data/repositories/order_repository_impl.dart';
+import 'package:pixcard/data/repositories/review_repository_impl.dart';
 import 'package:pixcard/domain/repositories/auth_repository.dart';
 import 'package:pixcard/domain/repositories/listing_repository.dart';
 import 'package:pixcard/domain/repositories/user_repository.dart';
+import 'package:pixcard/domain/repositories/offer_repository.dart';
+import 'package:pixcard/domain/repositories/conversation_repository.dart';
+import 'package:pixcard/domain/repositories/order_repository.dart';
+import 'package:pixcard/domain/repositories/review_repository.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 
@@ -25,4 +33,20 @@ final listingRepositoryProvider = Provider<ListingRepository>((ref) {
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   return UserRepositoryImpl(ref.watch(firebaseFirestoreProvider));
+});
+
+final offerRepositoryProvider = Provider<OfferRepository>((ref) {
+  return OfferRepositoryImpl(ref.watch(firebaseFirestoreProvider));
+});
+
+final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
+  return ConversationRepositoryImpl(ref.watch(firebaseFirestoreProvider));
+});
+
+final orderRepositoryProvider = Provider<OrderRepository>((ref) {
+  return OrderRepositoryImpl(ref.watch(firebaseFirestoreProvider));
+});
+
+final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
+  return ReviewRepositoryImpl(ref.watch(firebaseFirestoreProvider));
 });

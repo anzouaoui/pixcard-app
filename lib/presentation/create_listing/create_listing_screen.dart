@@ -10,23 +10,39 @@ class CreateListingScreen extends StatefulWidget {
 class _CreateListingScreenState extends State<CreateListingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _cardNameController = TextEditingController();
+  final _seriesController = TextEditingController();
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String _selectedGame = 'Pokémon';
-  String _selectedCondition = 'NM (Near Mint)';
+  String _selectedGame = 'pokemon';
+  String _selectedCondition = 'neuf';
+
+  static const _games = [
+    'pokemon',
+    'magic',
+    'yugioh',
+  ];
 
   static const _conditions = [
-    'NM (Near Mint)',
-    'LP (Lightly Played)',
-    'MP (Moderately Played)',
-    'HP (Heavily Played)',
-    'D (Damaged)',
+    'neuf',
+    'near_mint',
+    'tres_bon_etat',
+    'bon_etat',
+    'jouable',
   ];
+
+  static const _conditionLabels = {
+    'neuf': 'Neuf',
+    'near_mint': 'Near Mint',
+    'tres_bon_etat': 'Très bon état',
+    'bon_etat': 'Bon état',
+    'jouable': 'Jouable',
+  };
 
   @override
   void dispose() {
     _cardNameController.dispose();
+    _seriesController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -80,26 +96,29 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 validator: (v) => v != null && v.isNotEmpty ? null : 'Requis',
               ),
               const SizedBox(height: 16),
+              TextFormField(
+                controller: _seriesController,
+                decoration: const InputDecoration(labelText: 'Série'),
+                validator: (v) => v != null && v.isNotEmpty ? null : 'Requis',
+              ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedGame,
                 decoration: const InputDecoration(labelText: 'Jeu'),
-                items: const [
-                  DropdownMenuItem(value: 'Pokémon', child: Text('Pokémon')),
-                  DropdownMenuItem(value: 'Magic', child: Text('Magic')),
-                  DropdownMenuItem(value: 'Yu-Gi-Oh!', child: Text('Yu-Gi-Oh!')),
-                ],
+                items: _games
+                    .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedGame = v ?? _selectedGame),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Édition'),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedCondition,
                 decoration: const InputDecoration(labelText: 'État'),
                 items: _conditions
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(_conditionLabels[c] ?? c),
+                        ))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedCondition = v ?? _selectedCondition),
               ),
