@@ -6,6 +6,7 @@ import 'package:pixcard/core/constants/app_constants.dart';
 import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
+import 'package:pixcard/presentation/providers/listing_provider.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 
 class CreateListingScreen extends ConsumerStatefulWidget {
@@ -103,6 +104,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       await repo.createListing(listing);
 
       if (!mounted) return;
+      container.invalidate(listingsStreamProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Annonce publiée avec succès')),
       );
