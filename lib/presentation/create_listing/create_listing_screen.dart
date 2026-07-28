@@ -71,7 +71,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Future<void> _publishListing() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = ref.read(authStateProvider).user;
+    final container = ProviderScope.containerOf(context);
+    final user = container.read(authStateProvider).user;
     if (user == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,7 +99,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         imageUrl: widget.prefill?['imageUrl'] as String? ?? '',
       );
 
-      final repo = ref.read(listingRepositoryProvider);
+      final repo = container.read(listingRepositoryProvider);
       await repo.createListing(listing);
 
       if (!mounted) return;
