@@ -1,4 +1,4 @@
-enum MessageType { text, offer }
+enum MessageType { text, offer, system }
 
 class Message {
   const Message({

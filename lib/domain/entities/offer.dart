@@ -36,6 +36,26 @@ class Offer {
     );
   }
 
+  Offer copyWith({
+    String? id,
+    String? listingId,
+    String? buyerId,
+    String? sellerId,
+    double? amount,
+    OfferStatus? status,
+    DateTime? createdAt,
+  }) {
+    return Offer(
+      id: id ?? this.id,
+      listingId: listingId ?? this.listingId,
+      buyerId: buyerId ?? this.buyerId,
+      sellerId: sellerId ?? this.sellerId,
+      amount: amount ?? this.amount,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

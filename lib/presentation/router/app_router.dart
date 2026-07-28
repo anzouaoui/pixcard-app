@@ -1,12 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pixcard/domain/entities/listing.dart';
+import 'package:pixcard/domain/entities/order.dart' as domain;
 import 'package:pixcard/presentation/auth/forgot_password_screen.dart';
 import 'package:pixcard/presentation/auth/login_screen.dart';
 import 'package:pixcard/presentation/auth/register_screen.dart';
 import 'package:pixcard/presentation/create_listing/create_listing_screen.dart';
 import 'package:pixcard/presentation/filters/filters_screen.dart';
 import 'package:pixcard/presentation/home/home_screen.dart';
+import 'package:pixcard/presentation/checkout/checkout_screen.dart';
+import 'package:pixcard/presentation/checkout/order_tracking_screen.dart';
 import 'package:pixcard/presentation/listing_detail/listing_detail_screen.dart';
+import 'package:pixcard/presentation/listing_detail/make_offer_screen.dart';
+import 'package:pixcard/presentation/messaging/chat_screen.dart';
 import 'package:pixcard/presentation/messages/messages_screen.dart';
 import 'package:pixcard/presentation/onboarding/onboarding_screen.dart';
 import 'package:pixcard/presentation/profile/profile_screen.dart';
@@ -77,6 +83,37 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/filters', builder: (_, _s) => const FiltersScreen()),
+      GoRoute(
+        path: '/make-offer',
+        builder: (_, state) => MakeOfferScreen(
+          listing: state.extra as Listing,
+        ),
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (_, state) => ChatScreen(
+          conversationId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/checkout',
+        builder: (_, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return CheckoutScreen(
+              listing: extra['listing'] as Listing,
+              offerPrice: extra['offerPrice'] as double?,
+            );
+          }
+          return CheckoutScreen(listing: extra as Listing);
+        },
+      ),
+      GoRoute(
+        path: '/order-tracking',
+        builder: (_, state) => OrderTrackingScreen(
+          order: state.extra as domain.Order,
+        ),
+      ),
     ],
   );
 });

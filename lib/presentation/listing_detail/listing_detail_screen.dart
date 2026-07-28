@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pixcard/core/constants/app_constants.dart';
 import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
+import 'package:pixcard/presentation/providers/auth_provider.dart';
 
 final _listingProvider = FutureProvider.autoDispose.family<Listing?, String>((ref, id) async {
   try {
@@ -115,7 +117,7 @@ class _DetailBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Condition badge + game tag
+                // Condition badge + game tag + sold badge
                 Row(
                   children: [
                     _Badge(label: conditionLabel, color: conditionColor),
@@ -125,6 +127,10 @@ class _DetailBody extends ConsumerWidget {
                       color: cs.secondaryContainer,
                       textColor: cs.onSecondaryContainer,
                     ),
+                    if (listing.status == ListingStatus.sold) ...[
+                      const SizedBox(width: 8),
+                      _Badge(label: 'Vendu', color: Colors.orange),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -253,6 +259,27 @@ class _DetailBody extends ConsumerWidget {
                           color: cs.onSurfaceVariant,
                         ),
                   ),
+                const SizedBox(height: 24),
+
+                // ── Make offer button ──
+                Builder(
+                  builder: (context) {
+                    final currentUser = ref.watch(authStateProvider).user;
+                    final isSeller = currentUser?.id == listing.sellerId;
+                    if (isSeller || listing.status == ListingStatus.sold) return const SizedBox.shrink();
+                    return FilledButton.icon(
+                      onPressed: () => context.push('/make-offer', extra: listing),
+                      icon: const Icon(Icons.local_offer_outlined, size: 20),
+                      label: const Text('Faire une offre'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 100),
               ],
             ),
