@@ -32,7 +32,7 @@ class Review {
       buyerId: map['buyerId'] as String? ?? '',
       authorId: map['authorId'] as String? ?? '',
       targetId: map['targetId'] as String? ?? '',
-      rating: map['rating'] as int? ?? 0,
+      rating: (map['rating'] as num?)?.toInt() ?? 0,
       comment: map['comment'] as String?,
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String)
