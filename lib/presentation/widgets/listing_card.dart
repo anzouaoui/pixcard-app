@@ -93,9 +93,10 @@ class ListingCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       listing.cardName,
@@ -103,7 +104,7 @@ class ListingCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       '${listing.game.toUpperCase()} - ${listing.series}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -112,7 +113,7 @@ class ListingCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const Spacer(),
                     Text(
                       listing.price.toPriceString(),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
