@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pixcard/core/constants/app_constants.dart';
 import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/listing.dart';
+import 'package:pixcard/presentation/providers/auth_provider.dart';
+import 'package:pixcard/presentation/providers/providers.dart';
 
-class CreateListingScreen extends StatefulWidget {
+class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key, this.prefill});
 
   final Map<String, dynamic>? prefill;
 
   @override
-  State<CreateListingScreen> createState() => _CreateListingScreenState();
+  ConsumerState<CreateListingScreen> createState() =>
+      _CreateListingScreenState();
 }
 
-class _CreateListingScreenState extends State<CreateListingScreen> {
+class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _cardNameController = TextEditingController();
   final _seriesController = TextEditingController();
@@ -22,12 +27,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   String _selectedGame = 'pokemon';
   CardCondition _selectedCondition = CardCondition.neuf;
+  bool _isSubmitting = false;
 
   static const _games = ['pokemon', 'magic', 'yugioh'];
 
   double get _parsedPrice => double.tryParse(_priceController.text) ?? 0;
-  double get _netAmount => _parsedPrice * (1 - AppConstants.sellerCommissionRate);
-  double get _commissionAmount => _parsedPrice * AppConstants.sellerCommissionRate;
+  double get _netAmount =>
+      _parsedPrice * (1 - AppConstants.sellerCommissionRate);
+  double get _commissionAmount =>
+      _parsedPrice * AppConstants.sellerCommissionRate;
 
   @override
   void initState() {
@@ -45,7 +53,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (p['estimatedPrice'] is num) {
       _priceController.text = (p['estimatedPrice'] as num).toStringAsFixed(2);
     }
-    if (p['description'] is String) _descriptionController.text = p['description'];
+    if (p['game'] is String) _selectedGame = p['game'];
+    if (p['description'] is String) {
+      _descriptionController.text = p['description'];
+    }
   }
 
   @override
@@ -55,6 +66,54 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _priceController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _publishListing() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final user = ref.read(authStateProvider).user;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vous devez être connecté')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final listing = Listing(
+        id: '',
+        sellerId: user.id,
+        cardName: _cardNameController.text.trim(),
+        game: _selectedGame,
+        series: _seriesController.text.trim(),
+        condition: _selectedCondition,
+        price: _parsedPrice,
+        marketPriceAvg: widget.prefill?['marketPriceAvg'] as double?,
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        imageUrl: widget.prefill?['imageUrl'] as String? ?? '',
+      );
+
+      final repo = ref.read(listingRepositoryProvider);
+      await repo.createListing(listing);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Annonce publiée avec succès')),
+      );
+      context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -74,7 +133,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               const SizedBox(height: 24),
               TextFormField(
                 controller: _cardNameController,
-                decoration: const InputDecoration(labelText: 'Nom de la carte'),
+                decoration:
+                    const InputDecoration(labelText: 'Nom de la carte'),
                 validator: (v) => v != null && v.isNotEmpty ? null : 'Requis',
               ),
               const SizedBox(height: 16),
@@ -88,9 +148,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 value: _selectedGame,
                 decoration: const InputDecoration(labelText: 'Jeu'),
                 items: _games
-                    .map((g) => DropdownMenuItem(value: g, child: Text(g.capitalize)))
+                    .map((g) =>
+                        DropdownMenuItem(value: g, child: Text(g.capitalize)))
                     .toList(),
-                onChanged: (v) => setState(() => _selectedGame = v ?? _selectedGame),
+                onChanged: (v) =>
+                    setState(() => _selectedGame = v ?? _selectedGame),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<CardCondition>(
@@ -112,7 +174,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d+\.?\d{0,2}')),
                 ],
                 decoration: const InputDecoration(
                   labelText: 'Prix de vente',
@@ -139,15 +202,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               _buildCommissionSummary(cs),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Création d\'annonce à venir')),
-                    );
-                  }
-                },
-                child: const Text('Publier l\'annonce'),
+                onPressed: _isSubmitting ? null : _publishListing,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Publier l\'annonce'),
               ),
               const SizedBox(height: 32),
             ],
@@ -171,7 +233,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       child: Container(
         height: 200,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          color:
+              Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: Theme.of(context).colorScheme.outline,
@@ -219,7 +282,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Widget _buildCommissionSummary(ColorScheme cs) {
-    final pct = (AppConstants.sellerCommissionRate * 100).toStringAsFixed(0);
+    final pct =
+        (AppConstants.sellerCommissionRate * 100).toStringAsFixed(0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -232,7 +296,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Prix de vente', style: TextStyle(color: cs.onSurfaceVariant)),
+              Text('Prix de vente',
+                  style: TextStyle(color: cs.onSurfaceVariant)),
               Text(
                 _parsedPrice.toPriceString(),
                 style: const TextStyle(fontWeight: FontWeight.w600),
