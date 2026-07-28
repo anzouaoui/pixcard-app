@@ -1,10 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pixcard/core/utils/extensions.dart';
+import 'package:pixcard/domain/entities/app_user.dart';
+import 'package:pixcard/domain/entities/conversation.dart';
+import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/domain/entities/message.dart';
 import 'package:pixcard/domain/entities/offer.dart';
-import 'package:pixcard/presentation/providers/providers.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
-import 'package:pixcard/core/utils/extensions.dart';
+import 'package:pixcard/presentation/providers/providers.dart';
+
+// ── Providers ──
+
+final _conversationProvider = FutureProvider.autoDispose.family<Conversation?, String>((ref, id) async {
+  try {
+    return await ref.watch(conversationRepositoryProvider).getConversationById(id);
+  } catch (_) {
+    return null;
+  }
+});
+
+final _contactProvider = FutureProvider.autoDispose.family<AppUser?, String>((ref, userId) async {
+  try {
+    return await ref.watch(userRepositoryProvider).getUserById(userId);
+  } catch (_) {
+    return null;
+  }
+});
+
+final _listingProvider = FutureProvider.autoDispose.family<Listing?, String>((ref, listingId) async {
+  try {
+    return await ref.watch(listingRepositoryProvider).getListingById(listingId);
+  } catch (_) {
+    return null;
+  }
+});
+
+// ── Screen ──
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.conversationId});
@@ -54,18 +86,96 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final convRepo = ref.watch(conversationRepositoryProvider);
-    final messagesStream = convRepo.watchMessages(widget.conversationId);
     final currentUser = ref.watch(authStateProvider).user;
+    final convAsync = ref.watch(_conversationProvider(widget.conversationId));
+
+    return convAsync.when(
+      data: (conversation) {
+        if (conversation == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Conversation')),
+            body: const Center(child: Text('Conversation introuvable')),
+          );
+        }
+        final contactId = conversation.participantIds.firstWhere(
+          (id) => id != currentUser?.id,
+          orElse: () => '',
+        );
+        return _ChatBody(
+          conversation: conversation,
+          contactId: contactId,
+          onSend: _sendTextMessage,
+          onOfferAction: _updateOfferStatus,
+          messageController: _messageController,
+          scrollController: _scrollController,
+        );
+      },
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Conversation')),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => Scaffold(
+        appBar: AppBar(title: const Text('Conversation')),
+        body: const Center(child: Text('Erreur de chargement')),
+      ),
+    );
+  }
+}
+
+// ── Chat Body ──
+
+class _ChatBody extends ConsumerWidget {
+  const _ChatBody({
+    required this.conversation,
+    required this.contactId,
+    required this.onSend,
+    required this.onOfferAction,
+    required this.messageController,
+    required this.scrollController,
+  });
+
+  final Conversation conversation;
+  final String contactId;
+  final VoidCallback onSend;
+  final Future<void> Function(Offer offer, OfferStatus status) onOfferAction;
+  final TextEditingController messageController;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
+    final contactAsync = ref.watch(_contactProvider(contactId));
+    final listingAsync = conversation.listingId != null
+        ? ref.watch(_listingProvider(conversation.listingId!))
+        : null;
+    final currentUser = ref.watch(authStateProvider).user;
+    final convRepo = ref.watch(conversationRepositoryProvider);
+    final messagesStream = convRepo.watchMessages(conversation.id);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conversation'),
+        titleSpacing: 0,
+        title: contactAsync.when(
+          data: (contact) => contact != null
+              ? _ContactAppBar(contact: contact)
+              : const Text('Conversation'),
+          loading: () => const Text('Conversation'),
+          error: (_, __) => const Text('Conversation'),
+        ),
       ),
       body: Column(
         children: [
-          // ── Messages list ──
+          // ── Listing banner (pinned) ──
+          if (listingAsync != null)
+            listingAsync.when(
+              data: (listing) => listing != null
+                  ? _ListingBanner(listing: listing)
+                  : const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
+          // ── Messages ──
           Expanded(
             child: StreamBuilder<List<Message>>(
               stream: messagesStream,
@@ -76,14 +186,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 final messages = snapshot.data!;
                 if (messages.isEmpty) {
                   return Center(
-                    child: Text(
-                      'Aucun message',
-                      style: TextStyle(color: cs.onSurfaceVariant),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline_rounded, size: 48, color: cs.onSurfaceVariant),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Aucun message',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Envoyez le premier message',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
                     ),
                   );
                 }
                 return ListView.builder(
-                  controller: _scrollController,
+                  controller: scrollController,
                   reverse: true,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: messages.length,
@@ -93,7 +219,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     return _MessageBubble(
                       message: message,
                       isMe: isMe,
-                      onOfferAction: (offer, status) => _updateOfferStatus(offer, status),
+                      onOfferAction: onOfferAction,
                     );
                   },
                 );
@@ -101,7 +227,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ),
 
-          // ── Text input ──
+          // ── Input bar ──
           SafeArea(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -119,7 +245,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _messageController,
+                      controller: messageController,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
                         hintText: 'Message...',
@@ -132,12 +258,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         fillColor: cs.surfaceContainerHighest,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
-                      onSubmitted: (_) => _sendTextMessage(),
+                      onSubmitted: (_) => onSend(),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: _sendTextMessage,
+                    onPressed: onSend,
                     icon: const Icon(Icons.send_rounded, size: 20),
                     style: IconButton.styleFrom(
                       shape: const CircleBorder(),
@@ -149,6 +275,169 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Contact AppBar ──
+
+class _ContactAppBar extends StatelessWidget {
+  const _ContactAppBar({required this.contact});
+
+  final AppUser contact;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        // Avatar with online indicator
+        Stack(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: cs.primaryContainer,
+              backgroundImage: contact.photoUrl != null && contact.photoUrl!.isNotEmpty
+                  ? NetworkImage(contact.photoUrl!)
+                  : null,
+              child: contact.photoUrl == null || contact.photoUrl!.isEmpty
+                  ? Text(
+                      contact.displayName.isNotEmpty
+                          ? contact.displayName[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        color: cs.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    )
+                  : null,
+            ),
+            // Online dot
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: cs.surface, width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        // Name + status
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                contact.displayName.isNotEmpty ? contact.displayName : 'Vendeur',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'En ligne',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.green,
+                      fontSize: 11,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Listing Banner ──
+
+class _ListingBanner extends StatelessWidget {
+  const _ListingBanner({required this.listing});
+
+  final Listing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Miniature
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: listing.imageUrl.isNotEmpty
+                  ? Image.network(
+                      listing.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(cs),
+                    )
+                  : _placeholder(cs),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  listing.cardName,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  listing.price.toPriceString(),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          // Buy button
+          FilledButton(
+            onPressed: () => context.push('/checkout', extra: listing),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Acheter', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholder(ColorScheme cs) {
+    return Container(
+      color: cs.surfaceContainerHighest,
+      child: Icon(Icons.style_outlined, size: 22, color: cs.onSurfaceVariant),
     );
   }
 }
@@ -187,36 +476,59 @@ class _TextBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
 
+  String _formatTime(DateTime? dt) {
+    if (dt == null) return '';
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primary : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            decoration: BoxDecoration(
+              color: isMe ? cs.primary : cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 16),
+              ),
+            ),
+            child: Text(
+              message.text ?? '',
+              style: TextStyle(
+                color: isMe ? cs.onPrimary : cs.onSurface,
+              ),
+            ),
           ),
-        ),
-        child: Text(
-          message.text ?? '',
-          style: TextStyle(
-            color: isMe ? cs.onPrimary : cs.onSurface,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              _formatTime(message.createdAt),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// ── Offer Bubble (special) ──
+// ── Offer Bubble ──
 
 class _OfferBubble extends ConsumerWidget {
   const _OfferBubble({
@@ -290,6 +602,7 @@ class _OfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isPending = offer.status == OfferStatus.pending;
+    // Show actions to the recipient (seller) when pending
     final showActions = !isMe && isPending;
 
     return Align(
@@ -399,7 +712,7 @@ class _OfferCard extends StatelessWidget {
                 ),
               ),
 
-            // ── No actions if already acted (padding only) ──
+            // ── No actions if already acted ──
             if (!showActions) const SizedBox(height: 10),
           ],
         ),
