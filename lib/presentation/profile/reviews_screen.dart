@@ -4,8 +4,8 @@ import 'package:pixcard/domain/entities/review.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 
-final _reviewsProvider = StreamProvider.autoDispose.family<List<Review>, String>((ref, sellerId) {
-  return ref.watch(reviewRepositoryProvider).watchReviewsBySeller(sellerId);
+final _reviewsProvider = StreamProvider.autoDispose.family<List<Review>, String>((ref, targetId) {
+  return ref.watch(reviewRepositoryProvider).watchReviewsByTarget(targetId);
 });
 
 final _authorProvider = FutureProvider.autoDispose.family<AppUser?, String>((ref, userId) async {
@@ -146,6 +146,23 @@ class _ReviewItem extends ConsumerWidget {
                     size: 20,
                   );
                 }),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: review.isFromBuyer
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  review.isFromBuyer ? 'Acheteur' : 'Vendeur',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: review.isFromBuyer ? Colors.green.shade700 : Colors.blue.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
               ),
               const Spacer(),
               Text(

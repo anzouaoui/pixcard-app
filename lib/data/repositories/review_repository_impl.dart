@@ -16,7 +16,9 @@ class ReviewRepositoryImpl implements ReviewRepository {
       id: docRef.id,
       orderId: review.orderId,
       sellerId: review.sellerId,
+      buyerId: review.buyerId,
       authorId: review.authorId,
+      targetId: review.targetId,
       rating: review.rating,
       comment: review.comment,
       createdAt: DateTime.now(),
@@ -70,9 +72,38 @@ class ReviewRepositoryImpl implements ReviewRepository {
   }
 
   @override
+  Future<List<Review>> getReviewsByTarget(String targetId) async {
+    final snapshot = await _reviews
+        .where('targetId', isEqualTo: targetId)
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => Review.fromMap({
+              'id': doc.id,
+              ...doc.data() as Map<String, dynamic>,
+            }))
+        .toList();
+  }
+
+  @override
   Stream<List<Review>> watchReviewsBySeller(String sellerId) {
     return _reviews
         .where('sellerId', isEqualTo: sellerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Review.fromMap({
+                  'id': doc.id,
+                  ...doc.data() as Map<String, dynamic>,
+                }))
+            .toList());
+  }
+
+  @override
+  Stream<List<Review>> watchReviewsByTarget(String targetId) {
+    return _reviews
+        .where('targetId', isEqualTo: targetId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs

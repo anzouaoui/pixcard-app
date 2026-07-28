@@ -54,14 +54,13 @@ final _conversationProvider = FutureProvider.autoDispose.family<Conversation?, S
   }
 });
 
-// ── Existing review provider ──
+// ── Order reviews provider ──
 
-final _existingReviewProvider = FutureProvider.autoDispose.family<bool, String>((ref, orderId) async {
+final _orderReviewsProvider = FutureProvider.autoDispose.family<List<Review>, String>((ref, orderId) async {
   try {
-    final reviews = await ref.watch(reviewRepositoryProvider).getReviewsByOrder(orderId);
-    return reviews.isNotEmpty;
+    return await ref.watch(reviewRepositoryProvider).getReviewsByOrder(orderId);
   } catch (_) {
-    return false;
+    return [];
   }
 });
 
@@ -242,10 +241,11 @@ class OrderTrackingScreen extends ConsumerWidget {
           ],
 
           // ── Laisser un avis ──
-          if (!isSeller && currentOrder.status == OrderStatus.delivered) ...[
-            ref.watch(_existingReviewProvider(currentOrder.id)).when(
-              data: (hasReview) {
-                if (hasReview) return const SizedBox.shrink();
+          if (currentOrder.status == OrderStatus.delivered) ...[
+            ref.watch(_orderReviewsProvider(currentOrder.id)).when(
+              data: (reviews) {
+                final hasReviewed = reviews.any((r) => r.authorId == currentUserId);
+                if (hasReviewed) return const SizedBox.shrink();
                 return Column(
                   children: [
                     FilledButton.icon(
@@ -630,11 +630,15 @@ class OrderTrackingScreen extends ConsumerWidget {
     final auth = ref.read(authStateProvider);
     final authorId = auth.user?.id ?? '';
 
+    final isBuyer = authorId == order.buyerId;
+
     final review = Review(
       id: '',
       orderId: order.id,
       sellerId: order.sellerId,
+      buyerId: order.buyerId,
       authorId: authorId,
+      targetId: isBuyer ? order.sellerId : order.buyerId,
       rating: selectedRating,
       comment: commentCtrl.text.trim().isEmpty ? null : commentCtrl.text.trim(),
     );
