@@ -125,6 +125,22 @@ class OrderTrackingScreen extends ConsumerWidget {
             const SizedBox(height: 28),
           ],
 
+          // ── Buyer actions ──
+          if (!isSeller && currentOrder.status == OrderStatus.shipped) ...[
+            FilledButton.icon(
+              onPressed: () => _markAsDelivered(context, ref, currentOrder),
+              icon: const Icon(Icons.check_circle_rounded),
+              label: const Text('Marquer comme reçu'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+          ],
+
           // ── Tracking number ──
           if (currentOrder.trackingNumber != null && currentOrder.trackingNumber!.isNotEmpty)
             Container(
@@ -277,6 +293,60 @@ class OrderTrackingScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Commande marquée comme expédiée')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _markAsDelivered(BuildContext context, WidgetRef ref, Order order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la réception'),
+        content: const Text('Confirmez-vous avoir reçu la commande ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final updatedOrder = Order(
+      id: order.id,
+      listingId: order.listingId,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      cardPrice: order.cardPrice,
+      paymentFee: order.paymentFee,
+      totalPaid: order.totalPaid,
+      sellerCommissionRate: order.sellerCommissionRate,
+      sellerCommissionAmount: order.sellerCommissionAmount,
+      sellerNetAmount: order.sellerNetAmount,
+      status: OrderStatus.delivered,
+      stripePaymentIntentId: order.stripePaymentIntentId,
+      trackingNumber: order.trackingNumber,
+      createdAt: order.createdAt,
+    );
+
+    try {
+      await ref.read(orderRepositoryProvider).updateOrder(updatedOrder);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Commande marquée comme reçue')),
         );
       }
     } catch (e) {
