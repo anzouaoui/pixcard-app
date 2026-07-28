@@ -16,4 +16,5 @@ class AppConstants {
 
   // Platform commission
   static const double platformCommissionPercent = 5.0;
+  static const double sellerCommissionRate = 0.05;
 }
