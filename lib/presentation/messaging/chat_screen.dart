@@ -79,9 +79,88 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Future<void> _updateOfferStatus(Offer offer, OfferStatus newStatus) async {
+  Future<void> _handleOfferAction(Offer offer, OfferStatus newStatus, Listing listing) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(newStatus == OfferStatus.accepted ? 'Accepter l\'offre ?' : 'Refuser l\'offre ?'),
+        content: Text(
+          newStatus == OfferStatus.accepted
+              ? 'Vous acceptez l\'offre de ${offer.amount.toPriceString()}. La carte sera marquée comme vendue.'
+              : 'Voulez-vous vraiment refuser cette offre ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: newStatus == OfferStatus.accepted ? null : Theme.of(ctx).colorScheme.error,
+            ),
+            child: Text(newStatus == OfferStatus.accepted ? 'Accepter' : 'Refuser'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
     final offerRepo = ref.read(offerRepositoryProvider);
+    final convRepo = ref.read(conversationRepositoryProvider);
+    final listingRepo = ref.read(listingRepositoryProvider);
+
+    // 1. Update offer status
     await offerRepo.updateOffer(offer.copyWith(status: newStatus));
+
+    // 2. Send system message
+    final messageText = newStatus == OfferStatus.accepted
+        ? 'Offre de ${offer.amount.toPriceString()} acceptée'
+        : 'Offre de ${offer.amount.toPriceString()} refusée';
+    await convRepo.sendMessage(
+      widget.conversationId,
+      Message(
+        id: '',
+        senderId: 'system',
+        type: MessageType.system,
+        text: messageText,
+      ),
+    );
+
+    // 3. If accepted: mark listing as sold + decline other pending offers
+    if (newStatus == OfferStatus.accepted) {
+      // Mark listing as sold
+      final updatedListing = Listing(
+        id: listing.id,
+        sellerId: listing.sellerId,
+        cardName: listing.cardName,
+        game: listing.game,
+        series: listing.series,
+        condition: listing.condition,
+        price: listing.price,
+        marketPriceAvg: listing.marketPriceAvg,
+        description: listing.description,
+        imageUrl: listing.imageUrl,
+        status: ListingStatus.sold,
+        createdAt: listing.createdAt,
+      );
+      await listingRepo.updateListing(updatedListing);
+
+      // Decline other pending offers
+      final allOffers = await offerRepo.getOffersByListing(listing.id);
+      for (final otherOffer in allOffers) {
+        if (otherOffer.id != offer.id && otherOffer.status == OfferStatus.pending) {
+          await offerRepo.updateOffer(otherOffer.copyWith(status: OfferStatus.declined));
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    // Refresh listing in the UI
+    ref.invalidate(_listingProvider(listing.id));
   }
 
   @override
@@ -105,7 +184,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           conversation: conversation,
           contactId: contactId,
           onSend: _sendTextMessage,
-          onOfferAction: _updateOfferStatus,
+          onOfferAction: _handleOfferAction,
           messageController: _messageController,
           scrollController: _scrollController,
         );
@@ -137,7 +216,7 @@ class _ChatBody extends ConsumerWidget {
   final Conversation conversation;
   final String contactId;
   final VoidCallback onSend;
-  final Future<void> Function(Offer offer, OfferStatus status) onOfferAction;
+  final Future<void> Function(Offer offer, OfferStatus status, Listing listing) onOfferAction;
   final TextEditingController messageController;
   final ScrollController scrollController;
 
@@ -220,6 +299,7 @@ class _ChatBody extends ConsumerWidget {
                       message: message,
                       isMe: isMe,
                       onOfferAction: onOfferAction,
+                      listing: listingAsync?.valueOrNull,
                     );
                   },
                 );
@@ -419,16 +499,32 @@ class _ListingBanner extends StatelessWidget {
               ],
             ),
           ),
-          // Buy button
-          FilledButton(
-            onPressed: () => context.push('/checkout', extra: listing),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          // Buy button / Sold badge
+          if (listing.status == ListingStatus.sold)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Vendu',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            )
+          else
+            FilledButton(
+              onPressed: () => context.push('/checkout', extra: listing),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Acheter', style: TextStyle(fontSize: 12)),
             ),
-            child: const Text('Acheter', style: TextStyle(fontSize: 12)),
-          ),
         ],
       ),
     );
@@ -449,19 +545,25 @@ class _MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMe,
     required this.onOfferAction,
+    this.listing,
   });
 
   final Message message;
   final bool isMe;
-  final Future<void> Function(Offer offer, OfferStatus status) onOfferAction;
+  final Future<void> Function(Offer offer, OfferStatus status, Listing listing) onOfferAction;
+  final Listing? listing;
 
   @override
   Widget build(BuildContext context) {
+    if (message.type == MessageType.system) {
+      return _SystemBubble(text: message.text ?? '');
+    }
     if (message.type == MessageType.offer && message.offerId != null) {
       return _OfferBubble(
         offerId: message.offerId!,
         isMe: isMe,
         onOfferAction: onOfferAction,
+        listing: listing,
       );
     }
     return _TextBubble(message: message, isMe: isMe);
@@ -528,6 +630,38 @@ class _TextBubble extends StatelessWidget {
   }
 }
 
+// ── System Bubble ──
+
+class _SystemBubble extends StatelessWidget {
+  const _SystemBubble({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
 // ── Offer Bubble ──
 
 class _OfferBubble extends ConsumerWidget {
@@ -535,11 +669,13 @@ class _OfferBubble extends ConsumerWidget {
     required this.offerId,
     required this.isMe,
     required this.onOfferAction,
+    this.listing,
   });
 
   final String offerId;
   final bool isMe;
-  final Future<void> Function(Offer offer, OfferStatus status) onOfferAction;
+  final Future<void> Function(Offer offer, OfferStatus status, Listing listing) onOfferAction;
+  final Listing? listing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -555,7 +691,7 @@ class _OfferBubble extends ConsumerWidget {
           );
         }
         final offer = snapshot.data!;
-        return _OfferCard(offer: offer, isMe: isMe, onOfferAction: onOfferAction);
+        return _OfferCard(offer: offer, isMe: isMe, onOfferAction: onOfferAction, listing: listing);
       },
     );
   }
@@ -566,11 +702,13 @@ class _OfferCard extends StatelessWidget {
     required this.offer,
     required this.isMe,
     required this.onOfferAction,
+    this.listing,
   });
 
   final Offer offer;
   final bool isMe;
-  final Future<void> Function(Offer offer, OfferStatus status) onOfferAction;
+  final Future<void> Function(Offer offer, OfferStatus status, Listing listing) onOfferAction;
+  final Listing? listing;
 
   Color _statusColor(OfferStatus status, ColorScheme cs) {
     switch (status) {
@@ -683,7 +821,7 @@ class _OfferCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => onOfferAction(offer, OfferStatus.declined),
+                        onPressed: listing != null ? () => onOfferAction(offer, OfferStatus.declined, listing!) : null,
                         icon: const Icon(Icons.close_rounded, size: 18),
                         label: const Text('Refuser'),
                         style: OutlinedButton.styleFrom(
@@ -698,7 +836,7 @@ class _OfferCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: () => onOfferAction(offer, OfferStatus.accepted),
+                        onPressed: listing != null ? () => onOfferAction(offer, OfferStatus.accepted, listing!) : null,
                         icon: const Icon(Icons.check_rounded, size: 18),
                         label: const Text('Accepter'),
                         style: FilledButton.styleFrom(

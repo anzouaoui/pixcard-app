@@ -117,7 +117,7 @@ class _DetailBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Condition badge + game tag
+                // Condition badge + game tag + sold badge
                 Row(
                   children: [
                     _Badge(label: conditionLabel, color: conditionColor),
@@ -127,6 +127,10 @@ class _DetailBody extends ConsumerWidget {
                       color: cs.secondaryContainer,
                       textColor: cs.onSecondaryContainer,
                     ),
+                    if (listing.status == ListingStatus.sold) ...[
+                      const SizedBox(width: 8),
+                      _Badge(label: 'Vendu', color: Colors.orange),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -262,7 +266,7 @@ class _DetailBody extends ConsumerWidget {
                   builder: (context) {
                     final currentUser = ref.watch(authStateProvider).user;
                     final isSeller = currentUser?.id == listing.sellerId;
-                    if (isSeller) return const SizedBox.shrink();
+                    if (isSeller || listing.status == ListingStatus.sold) return const SizedBox.shrink();
                     return FilledButton.icon(
                       onPressed: () => context.push('/make-offer', extra: listing),
                       icon: const Icon(Icons.local_offer_outlined, size: 20),
