@@ -5,7 +5,7 @@ import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/domain/entities/order.dart' as domain;
-import 'package:pixcard/presentation/checkout/order_confirmation_screen.dart';
+import 'package:pixcard/presentation/checkout/payment_confirmation_screen.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 
@@ -89,7 +89,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // Navigate to confirmation screen
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (_) => OrderConfirmationScreen(order: createdOrder),
+          builder: (_) => PaymentConfirmationScreen(order: createdOrder),
         ),
         (route) => route.isFirst,
       );
