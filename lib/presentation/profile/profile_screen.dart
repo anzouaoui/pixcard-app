@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -67,7 +68,7 @@ class ProfileScreen extends ConsumerWidget {
                   leading: const Icon(Icons.shopping_bag_outlined),
                   title: const Text('Mes achats'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
+                  onTap: () => context.push('/orders'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt_long_outlined),

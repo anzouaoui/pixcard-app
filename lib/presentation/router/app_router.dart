@@ -15,6 +15,7 @@ import 'package:pixcard/presentation/listing_detail/make_offer_screen.dart';
 import 'package:pixcard/presentation/messaging/chat_screen.dart';
 import 'package:pixcard/presentation/messages/messages_screen.dart';
 import 'package:pixcard/presentation/onboarding/onboarding_screen.dart';
+import 'package:pixcard/presentation/orders/orders_screen.dart';
 import 'package:pixcard/presentation/profile/profile_screen.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/onboarding_provider.dart';
@@ -113,6 +114,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => OrderTrackingScreen(
           order: state.extra as domain.Order,
         ),
+      ),
+      GoRoute(
+        path: '/orders',
+        builder: (_, _s) => const OrdersScreen(),
       ),
     ],
   );
