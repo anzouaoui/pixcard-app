@@ -6,6 +6,7 @@ import 'package:pixcard/presentation/auth/forgot_password_screen.dart';
 import 'package:pixcard/presentation/auth/login_screen.dart';
 import 'package:pixcard/presentation/auth/register_screen.dart';
 import 'package:pixcard/presentation/create_listing/create_listing_screen.dart';
+import 'package:pixcard/presentation/favorites/favorites_screen.dart';
 import 'package:pixcard/presentation/filters/filters_screen.dart';
 import 'package:pixcard/presentation/home/home_screen.dart';
 import 'package:pixcard/presentation/checkout/checkout_screen.dart';
@@ -122,6 +123,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/sales',
         builder: (_, _s) => const orders.OrdersScreen(mode: orders.OrdersMode.seller),
+      ),
+      GoRoute(
+        path: '/favorites',
+        builder: (_, _s) => const FavoritesScreen(),
       ),
     ],
   );

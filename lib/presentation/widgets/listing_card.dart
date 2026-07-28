@@ -3,10 +3,12 @@ import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 
 class ListingCard extends StatelessWidget {
-  const ListingCard({super.key, required this.listing, this.onTap});
+  const ListingCard({super.key, required this.listing, this.onTap, this.isFavorite, this.onToggleFavorite});
 
   final Listing listing;
   final VoidCallback? onTap;
+  final bool? isFavorite;
+  final VoidCallback? onToggleFavorite;
 
   Color _getConditionColor(CardCondition condition) {
     switch (condition) {
@@ -89,6 +91,25 @@ class ListingCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (onToggleFavorite != null)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: IconButton(
+                      onPressed: onToggleFavorite,
+                      icon: Icon(
+                        isFavorite == true ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
+                        size: 22,
+                        color: isFavorite == true ? Colors.red : Colors.white,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black26,
+                        padding: const EdgeInsets.all(4),
+                        minimumSize: const Size(32, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
               ],
             ),
             Expanded(

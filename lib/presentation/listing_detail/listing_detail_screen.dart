@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:pixcard/core/constants/app_constants.dart';
 import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
+import 'package:pixcard/domain/entities/favorite.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
+import 'package:pixcard/presentation/providers/favorites_provider.dart';
 
 final _listingProvider = FutureProvider.autoDispose.family<Listing?, String>((ref, id) async {
   try {
@@ -87,6 +89,9 @@ class _DetailBody extends ConsumerWidget {
     final conditionLabel = _getConditionLabel(listing.condition);
     final buyerPays = listing.price / (1 - AppConstants.sellerCommissionRate);
     final commission = buyerPays - listing.price;
+    final currentUser = ref.watch(authStateProvider).user;
+    final isOwnListing = currentUser?.id == listing.sellerId;
+    final isFav = ref.watch(isListingFavoriteProvider(listing.id));
 
     return CustomScrollView(
       slivers: [
@@ -99,6 +104,16 @@ class _DetailBody extends ConsumerWidget {
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => Navigator.of(context).pop(),
           ),
+          actions: [
+            if (!isOwnListing)
+              IconButton(
+                onPressed: () => _toggleFavorite(ref, listing.id, isFav),
+                icon: Icon(
+                  isFav ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
+                  color: isFav ? Colors.red : null,
+                ),
+              ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: listing.imageUrl.isNotEmpty
                 ? Image.network(
@@ -264,7 +279,6 @@ class _DetailBody extends ConsumerWidget {
                 // ── Make offer button ──
                 Builder(
                   builder: (context) {
-                    final currentUser = ref.watch(authStateProvider).user;
                     final isSeller = currentUser?.id == listing.sellerId;
                     if (isSeller || listing.status == ListingStatus.sold) return const SizedBox.shrink();
                     return FilledButton.icon(
@@ -287,6 +301,17 @@ class _DetailBody extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  void _toggleFavorite(WidgetRef ref, String listingId, bool currentlyFav) async {
+    final userId = ref.read(authStateProvider).user?.id;
+    if (userId == null) return;
+    final repo = ref.read(userRepositoryProvider);
+    if (currentlyFav) {
+      await repo.removeFavorite(userId, listingId);
+    } else {
+      await repo.addFavorite(userId, Favorite(listingId: listingId, addedAt: DateTime.now()));
+    }
   }
 
   Widget _placeholderImage(ColorScheme cs) {
