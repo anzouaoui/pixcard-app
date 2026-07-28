@@ -7,6 +7,7 @@ import 'package:pixcard/presentation/auth/register_screen.dart';
 import 'package:pixcard/presentation/create_listing/create_listing_screen.dart';
 import 'package:pixcard/presentation/filters/filters_screen.dart';
 import 'package:pixcard/presentation/home/home_screen.dart';
+import 'package:pixcard/presentation/checkout/checkout_screen.dart';
 import 'package:pixcard/presentation/listing_detail/listing_detail_screen.dart';
 import 'package:pixcard/presentation/listing_detail/make_offer_screen.dart';
 import 'package:pixcard/presentation/messaging/chat_screen.dart';
@@ -90,6 +91,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chat/:id',
         builder: (_, state) => ChatScreen(
           conversationId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/checkout',
+        builder: (_, state) => CheckoutScreen(
+          listing: state.extra as Listing,
         ),
       ),
     ],
