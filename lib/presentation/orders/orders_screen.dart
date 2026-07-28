@@ -6,18 +6,30 @@ import 'package:pixcard/domain/entities/order.dart' as domain;
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 
+// ── Mode ──
+
+enum OrdersMode { buyer, seller }
+
 // ── Orders stream for current user ──
 
-final _ordersProvider = StreamProvider.autoDispose<List<domain.Order>>((ref) {
+final _buyerOrdersProvider = StreamProvider.autoDispose<List<domain.Order>>((ref) {
   final auth = ref.watch(authStateProvider);
   if (auth.user == null) return const Stream.empty();
   return ref.watch(orderRepositoryProvider).watchOrdersByBuyer(auth.user!.id);
 });
 
+final _sellerOrdersProvider = StreamProvider.autoDispose<List<domain.Order>>((ref) {
+  final auth = ref.watch(authStateProvider);
+  if (auth.user == null) return const Stream.empty();
+  return ref.watch(orderRepositoryProvider).watchOrdersBySeller(auth.user!.id);
+});
+
 // ── Screen ──
 
 class OrdersScreen extends ConsumerWidget {
-  const OrdersScreen({super.key});
+  const OrdersScreen({super.key, this.mode = OrdersMode.buyer});
+
+  final OrdersMode mode;
 
   String _orderReference(domain.Order order) =>
       'PX-${order.createdAt?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch}';
@@ -25,11 +37,15 @@ class OrdersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    final ordersAsync = ref.watch(_ordersProvider);
+    final ordersAsync = ref.watch(
+      mode == OrdersMode.buyer ? _buyerOrdersProvider : _sellerOrdersProvider,
+    );
+
+    final isBuyer = mode == OrdersMode.buyer;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes achats'),
+        title: Text(isBuyer ? 'Mes achats' : 'Mes ventes'),
       ),
       body: ordersAsync.when(
         data: (orders) {
@@ -38,17 +54,21 @@ class OrdersScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_bag_outlined, size: 64, color: cs.onSurfaceVariant),
+                  Icon(
+                    isBuyer ? Icons.shopping_bag_outlined : Icons.storefront_outlined,
+                    size: 64,
+                    color: cs.onSurfaceVariant,
+                  ),
                   const SizedBox(height: 16),
                   Text(
-                    'Aucun achat pour le moment',
+                    isBuyer ? 'Aucun achat pour le moment' : 'Aucune vente pour le moment',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Vos commandes apparaîtront ici',
+                    isBuyer ? 'Vos commandes apparaîtront ici' : 'Vos ventes apparaîtront ici',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
