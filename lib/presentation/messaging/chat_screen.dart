@@ -850,8 +850,31 @@ class _OfferCard extends StatelessWidget {
                 ),
               ),
 
+            // ── Pay button (buyer only, accepted) ──
+            if (isMe && offer.status == OfferStatus.accepted && listing != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                child: FilledButton.icon(
+                  onPressed: () {
+                    context.push('/checkout', extra: {
+                      'listing': listing!,
+                      'offerPrice': offer.amount,
+                    });
+                  },
+                  icon: const Icon(Icons.payment_rounded, size: 18),
+                  label: const Text('Procéder au paiement'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+
             // ── No actions if already acted ──
-            if (!showActions) const SizedBox(height: 10),
+            if (!showActions && !(isMe && offer.status == OfferStatus.accepted))
+              const SizedBox(height: 10),
           ],
         ),
       ),

@@ -26,9 +26,10 @@ enum PaymentMethod { card, applePay, paypal }
 // ── Screen ──
 
 class CheckoutScreen extends ConsumerStatefulWidget {
-  const CheckoutScreen({super.key, required this.listing});
+  const CheckoutScreen({super.key, required this.listing, this.offerPrice});
 
   final Listing listing;
+  final double? offerPrice;
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -39,10 +40,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isProcessing = false;
 
   Listing get _listing => widget.listing;
+  double get _cardPrice => widget.offerPrice ?? _listing.price;
 
   // Stripe fee: 2.9% + 0.30€
-  double get _paymentFee => _listing.price * 0.029 + 0.30;
-  double get _total => _listing.price + _paymentFee;
+  double get _paymentFee => _cardPrice * 0.029 + 0.30;
+  double get _total => _cardPrice + _paymentFee;
 
   Future<void> _handlePayment() async {
     setState(() => _isProcessing = true);
@@ -57,8 +59,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       await Future<void>.delayed(const Duration(seconds: 2));
 
       // Calculate commission
-      final commissionAmount = _listing.price * AppConstants.sellerCommissionRate;
-      final sellerNet = _listing.price - commissionAmount;
+      final commissionAmount = _cardPrice * AppConstants.sellerCommissionRate;
+      final sellerNet = _cardPrice - commissionAmount;
 
       // Get current user
       final auth = ProviderScope.containerOf(context).read(authStateProvider);
@@ -70,7 +72,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         listingId: _listing.id,
         buyerId: buyerId,
         sellerId: _listing.sellerId,
-        cardPrice: _listing.price,
+        cardPrice: _cardPrice,
         paymentFee: _paymentFee,
         totalPaid: _total,
         sellerCommissionRate: AppConstants.sellerCommissionRate,
@@ -114,12 +116,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           // ── Listing summary ──
-          _ListingSummary(listing: _listing, sellerAsync: sellerAsync),
+          _ListingSummary(
+            listing: _listing,
+            sellerAsync: sellerAsync,
+            offerPrice: widget.offerPrice,
+          ),
           const SizedBox(height: 24),
 
           // ── Fee breakdown ──
           _FeeBreakdown(
-            price: _listing.price,
+            price: _cardPrice,
             fee: _paymentFee,
             total: _total,
           ),
@@ -165,10 +171,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 // ── Listing Summary ──
 
 class _ListingSummary extends StatelessWidget {
-  const _ListingSummary({required this.listing, required this.sellerAsync});
+  const _ListingSummary({required this.listing, required this.sellerAsync, this.offerPrice});
 
   final Listing listing;
   final AsyncValue<AppUser?> sellerAsync;
+  final double? offerPrice;
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +286,27 @@ class _ListingSummary extends StatelessWidget {
             ),
           ),
           // Price
-          Text(
-            listing.price.toPriceString(),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (offerPrice != null) ...[
+                Text(
+                  listing.price.toPriceString(),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        decoration: TextDecoration.lineThrough,
+                      ),
                 ),
+                const SizedBox(height: 2),
+              ],
+              Text(
+                (offerPrice ?? listing.price).toPriceString(),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: cs.primary,
+                    ),
+              ),
+            ],
           ),
         ],
       ),

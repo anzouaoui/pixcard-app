@@ -95,9 +95,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/checkout',
-        builder: (_, state) => CheckoutScreen(
-          listing: state.extra as Listing,
-        ),
+        builder: (_, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return CheckoutScreen(
+              listing: extra['listing'] as Listing,
+              offerPrice: extra['offerPrice'] as double?,
+            );
+          }
+          return CheckoutScreen(listing: extra as Listing);
+        },
       ),
     ],
   );
