@@ -12,6 +12,7 @@ import 'package:pixcard/presentation/onboarding/onboarding_screen.dart';
 import 'package:pixcard/presentation/profile/profile_screen.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/onboarding_provider.dart';
+import 'package:pixcard/presentation/scan/scan_result_screen.dart';
 import 'package:pixcard/presentation/scan/scan_screen.dart';
 import 'package:pixcard/presentation/widgets/main_scaffold.dart';
 
@@ -58,7 +59,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (_, _s) => const RegisterScreen()),
       GoRoute(path: '/forgot-password', builder: (_, _s) => const ForgotPasswordScreen()),
       GoRoute(path: '/listing/:id', builder: (_, state) => ListingDetailScreen(id: state.pathParameters['id']!)),
-      GoRoute(path: '/create-listing', builder: (_, _s) => const CreateListingScreen()),
+      GoRoute(
+        path: '/create-listing',
+        builder: (_, state) {
+          final prefill = state.extra as Map<String, dynamic>?;
+          return CreateListingScreen(prefill: prefill);
+        },
+      ),
+      GoRoute(
+        path: '/scan-result',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ScanResultScreen(
+            result: extra['result'],
+            imagePath: extra['imagePath'] as String?,
+          );
+        },
+      ),
       GoRoute(path: '/filters', builder: (_, _s) => const FiltersScreen()),
     ],
   );

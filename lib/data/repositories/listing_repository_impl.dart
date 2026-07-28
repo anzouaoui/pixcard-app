@@ -123,4 +123,35 @@ class ListingRepositoryImpl implements ListingRepository {
               .toList(),
         );
   }
+
+  @override
+  Future<CardAnalysisResult> analyzeCard(String imagePath) async {
+    // TODO: Connect to Ximilar API
+    // For now, return a mock result to test the flow
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Simulate confidence - can be adjusted for testing error state
+    const confidence = 0.85;
+
+    if (confidence < 0.7) {
+      throw CardAnalysisException(
+        'Confiance trop faible',
+        code: 'LOW_CONFIDENCE',
+        confidence: confidence,
+      );
+    }
+
+    return const CardAnalysisResult(
+      cardName: 'Pikachu',
+      setName: 'Base Set',
+      condition: CardCondition.nearMount,
+      confidence: confidence,
+      estimatedPrice: 45.00,
+      imageUrl: '',
+      marketPriceMin: 38.50,
+      marketPriceAvg: 47.20,
+      marketPriceMax: 62.00,
+      marketPricesWeek: [42.0, 39.5, 44.0, 48.0, 52.0, 46.5, 47.2],
+    );
+  }
 }
