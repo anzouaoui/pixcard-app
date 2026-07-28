@@ -8,4 +8,5 @@ abstract interface class OrderRepository {
   Future<List<Order>> getOrdersBySeller(String sellerId);
   Stream<List<Order>> watchOrdersByBuyer(String buyerId);
   Stream<List<Order>> watchOrdersBySeller(String sellerId);
+  Stream<Order> watchOrderById(String id);
 }

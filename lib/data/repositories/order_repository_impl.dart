@@ -108,4 +108,16 @@ class OrderRepositoryImpl implements OrderRepository {
               .toList(),
         );
   }
+
+  @override
+  Stream<Order> watchOrderById(String id) {
+    return _orders.doc(id).snapshots().map(
+          (doc) => doc.exists
+              ? Order.fromMap({
+                  'id': doc.id,
+                  ...doc.data() as Map<String, dynamic>,
+                })
+              : throw Exception('Order not found'),
+        );
+  }
 }

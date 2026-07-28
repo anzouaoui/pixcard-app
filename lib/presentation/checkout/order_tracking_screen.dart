@@ -3,13 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
 import 'package:pixcard/domain/entities/order.dart';
+import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
+
+// ── Order stream ──
+
+final _orderStreamProvider = StreamProvider.autoDispose.family<Order, String>((ref, id) {
+  return ref.watch(orderRepositoryProvider).watchOrderById(id);
+});
 
 // ── Seller provider ──
 
-final _sellerProvider = FutureProvider.autoDispose.family<AppUser?, String>((ref, sellerId) async {
+final _userProvider = FutureProvider.autoDispose.family<AppUser?, String>((ref, userId) async {
   try {
-    return await ref.watch(userRepositoryProvider).getUserById(sellerId);
+    return await ref.watch(userRepositoryProvider).getUserById(userId);
   } catch (_) {
     return null;
   }
@@ -22,15 +29,20 @@ class OrderTrackingScreen extends ConsumerWidget {
 
   final Order order;
 
-  String get _orderReference =>
-      'PX-${order.createdAt?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch}';
+  String _orderReference(Order o) =>
+      'PX-${o.createdAt?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    final sellerAsync = ref.watch(_sellerProvider(order.sellerId));
+    final auth = ref.watch(authStateProvider);
+    final currentUserId = auth.user?.id ?? '';
 
-    final steps = _buildSteps(cs);
+    final orderAsync = ref.watch(_orderStreamProvider(order.id));
+    final currentOrder = orderAsync.valueOrNull ?? order;
+
+    final isSeller = currentUserId == currentOrder.sellerId;
+    final steps = _buildSteps(currentOrder, cs);
 
     return Scaffold(
       appBar: AppBar(
@@ -47,14 +59,14 @@ class OrderTrackingScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _orderReference,
+                      _orderReference(currentOrder),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _formatDate(order.createdAt ?? DateTime.now()),
+                      _formatDate(currentOrder.createdAt ?? DateTime.now()),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
@@ -62,7 +74,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              _StatusBadge(status: order.status, cs: cs),
+              _StatusBadge(status: currentOrder.status, cs: cs),
             ],
           ),
           const SizedBox(height: 32),
@@ -97,8 +109,24 @@ class OrderTrackingScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
+          // ── Seller actions ──
+          if (isSeller && currentOrder.status == OrderStatus.paid) ...[
+            FilledButton.icon(
+              onPressed: () => _markAsShipped(context, ref, currentOrder),
+              icon: const Icon(Icons.local_shipping_rounded),
+              label: const Text('Marquer comme expédié'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+          ],
+
           // ── Tracking number ──
-          if (order.trackingNumber != null && order.trackingNumber!.isNotEmpty)
+          if (currentOrder.trackingNumber != null && currentOrder.trackingNumber!.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -120,7 +148,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                               ),
                         ),
                         Text(
-                          order.trackingNumber!,
+                          currentOrder.trackingNumber!,
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.w700,
                               ),
@@ -138,28 +166,18 @@ class OrderTrackingScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          if (order.trackingNumber != null && order.trackingNumber!.isNotEmpty)
+          if (currentOrder.trackingNumber != null && currentOrder.trackingNumber!.isNotEmpty)
             const SizedBox(height: 28),
 
-          // ── Seller contact ──
+          // ── Contact card ──
           Text(
-            'Vendeur',
+            isSeller ? 'Acheteur' : 'Vendeur',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
           ),
           const SizedBox(height: 10),
-          sellerAsync.when(
-            data: (seller) {
-              if (seller == null) return const SizedBox.shrink();
-              return _SellerCard(seller: seller, cs: cs);
-            },
-            loading: () => const SizedBox(
-              height: 60,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
+          _buildContactCard(context, ref, currentOrder, isSeller, cs),
           const SizedBox(height: 36),
 
           // ── Back to home ──
@@ -172,7 +190,7 @@ class OrderTrackingScreen extends ConsumerWidget {
               ),
             ),
             child: const Text(
-              'Retour à l\'accueil',
+              "Retour à l'accueil",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
@@ -181,7 +199,96 @@ class OrderTrackingScreen extends ConsumerWidget {
     );
   }
 
-  List<_TimelineStepData> _buildSteps(ColorScheme cs) {
+  Widget _buildContactCard(BuildContext context, WidgetRef ref, Order order, bool isSeller, ColorScheme cs) {
+    final contactId = isSeller ? order.buyerId : order.sellerId;
+    final contactAsync = ref.watch(_userProvider(contactId));
+
+    return contactAsync.when(
+      data: (contact) {
+        if (contact == null) return const SizedBox.shrink();
+        return ContactCard(contact: contact, cs: cs, isSeller: isSeller);
+      },
+      loading: () => const SizedBox(
+        height: 60,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+
+  Future<void> _markAsShipped(BuildContext context, WidgetRef ref, Order order) async {
+    final trackingController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Marquer comme expédié'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Confirmez-vous que la commande a été expédiée ?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: trackingController,
+              decoration: const InputDecoration(
+                labelText: 'Numéro de suivi (optionnel)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirmer l\'envoi'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final updatedOrder = Order(
+      id: order.id,
+      listingId: order.listingId,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      cardPrice: order.cardPrice,
+      paymentFee: order.paymentFee,
+      totalPaid: order.totalPaid,
+      sellerCommissionRate: order.sellerCommissionRate,
+      sellerCommissionAmount: order.sellerCommissionAmount,
+      sellerNetAmount: order.sellerNetAmount,
+      status: OrderStatus.shipped,
+      stripePaymentIntentId: order.stripePaymentIntentId,
+      trackingNumber: trackingController.text.isNotEmpty
+          ? trackingController.text
+          : order.trackingNumber,
+      createdAt: order.createdAt,
+    );
+
+    try {
+      await ref.read(orderRepositoryProvider).updateOrder(updatedOrder);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Commande marquée comme expédiée')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e')),
+        );
+      }
+    }
+  }
+
+  List<_TimelineStepData> _buildSteps(Order order, ColorScheme cs) {
     final allSteps = [
       _TimelineStepData(
         title: 'Paiement confirmé',
@@ -374,13 +481,14 @@ class _TimelineStepData {
   final IconData icon;
 }
 
-// ── Seller Card ──
+// ── Contact Card ──
 
-class _SellerCard extends StatelessWidget {
-  const _SellerCard({required this.seller, required this.cs});
+class ContactCard extends StatelessWidget {
+  const ContactCard({super.key, required this.contact, required this.cs, required this.isSeller});
 
-  final AppUser seller;
+  final AppUser contact;
   final ColorScheme cs;
+  final bool isSeller;
 
   @override
   Widget build(BuildContext context) {
@@ -396,12 +504,12 @@ class _SellerCard extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: cs.primaryContainer,
-            backgroundImage: seller.photoUrl != null && seller.photoUrl!.isNotEmpty
-                ? NetworkImage(seller.photoUrl!)
+            backgroundImage: contact.photoUrl != null && contact.photoUrl!.isNotEmpty
+                ? NetworkImage(contact.photoUrl!)
                 : null,
-            child: seller.photoUrl == null || seller.photoUrl!.isEmpty
+            child: contact.photoUrl == null || contact.photoUrl!.isEmpty
                 ? Text(
-                    seller.displayName.isNotEmpty ? seller.displayName[0].toUpperCase() : '?',
+                    contact.displayName.isNotEmpty ? contact.displayName[0].toUpperCase() : '?',
                     style: TextStyle(
                       color: cs.onPrimaryContainer,
                       fontWeight: FontWeight.w700,
@@ -416,7 +524,7 @@ class _SellerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  seller.displayName.isNotEmpty ? seller.displayName : 'Vendeur',
+                  contact.displayName.isNotEmpty ? contact.displayName : (isSeller ? 'Acheteur' : 'Vendeur'),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -427,12 +535,12 @@ class _SellerCard extends StatelessWidget {
                     Icon(Icons.star_rounded, size: 14, color: Colors.amber.shade600),
                     const SizedBox(width: 2),
                     Text(
-                      seller.rating.toStringAsFixed(1),
+                      contact.rating.toStringAsFixed(1),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${seller.salesCount} vente${seller.salesCount > 1 ? 's' : ''}',
+                      '${contact.salesCount} vente${contact.salesCount > 1 ? 's' : ''}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
@@ -444,11 +552,11 @@ class _SellerCard extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {
-              // TODO: navigate to conversation with seller
+              // TODO: navigate to conversation with contact
               context.go('/messages');
             },
             icon: Icon(Icons.chat_outlined, color: cs.primary),
-            tooltip: 'Contacter le vendeur',
+            tooltip: 'Contacter',
           ),
         ],
       ),
