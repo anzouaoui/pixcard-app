@@ -77,6 +77,12 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/sales'),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.favorite_outline_rounded),
+                  title: const Text('Mes favoris'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/favorites'),
+                ),
+                ListTile(
                   leading: const Icon(Icons.receipt_long_outlined),
                   title: const Text('Historique'),
                   trailing: const Icon(Icons.chevron_right),

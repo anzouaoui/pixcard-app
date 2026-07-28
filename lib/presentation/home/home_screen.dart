@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pixcard/presentation/widgets/listing_card.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
+import 'package:pixcard/presentation/providers/favorites_provider.dart';
 import 'package:pixcard/presentation/providers/filter_provider.dart';
+import 'package:pixcard/presentation/providers/providers.dart';
+import 'package:pixcard/domain/entities/favorite.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -232,9 +235,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           itemCount: listings.length,
           itemBuilder: (context, index) {
             final listing = listings[index];
+            final isFav = ref.watch(isListingFavoriteProvider(listing.id));
             return ListingCard(
               listing: listing,
+              isFavorite: isFav,
               onTap: () => context.push('/listing/${listing.id}'),
+              onToggleFavorite: () {
+                final userId = ref.read(authStateProvider).user?.id;
+                if (userId == null) return;
+                final repo = ref.read(userRepositoryProvider);
+                if (isFav) {
+                  repo.removeFavorite(userId, listing.id);
+                } else {
+                  repo.addFavorite(userId, Favorite(listingId: listing.id, addedAt: DateTime.now()));
+                }
+              },
             );
           },
         );
