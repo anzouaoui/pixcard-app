@@ -6,6 +6,7 @@ abstract interface class ConversationRepository {
   Future<Conversation> getConversationById(String id);
   Future<List<Conversation>> getConversationsByUser(String userId);
   Stream<List<Conversation>> watchConversationsByUser(String userId);
+  Future<Conversation?> getConversationByListing(String listingId, List<String> participantIds);
   Future<void> sendMessage(String conversationId, Message message);
   Future<List<Message>> getMessages(String conversationId, {int limit});
   Stream<List<Message>> watchMessages(String conversationId);

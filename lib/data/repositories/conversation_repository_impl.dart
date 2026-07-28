@@ -126,4 +126,20 @@ class ConversationRepositoryImpl implements ConversationRepository {
               .toList(),
         );
   }
+
+  @override
+  Future<Conversation?> getConversationByListing(String listingId, List<String> participantIds) async {
+    final snapshot = await _conversations
+        .where('listingId', isEqualTo: listingId)
+        .where('participantIds', arrayContains: participantIds.first)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) return null;
+
+    return Conversation.fromMap({
+      'id': snapshot.docs.first.id,
+      ...snapshot.docs.first.data() as Map<String, dynamic>,
+    });
+  }
 }

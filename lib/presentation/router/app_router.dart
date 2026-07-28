@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pixcard/domain/entities/listing.dart';
-import 'package:pixcard/domain/entities/order.dart' as domain;
 import 'package:pixcard/presentation/auth/forgot_password_screen.dart';
 import 'package:pixcard/presentation/auth/login_screen.dart';
 import 'package:pixcard/presentation/auth/register_screen.dart';
@@ -111,9 +110,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/order-tracking',
+        path: '/order-tracking/:orderId',
         builder: (_, state) => OrderTrackingScreen(
-          order: state.extra as domain.Order,
+          orderId: state.pathParameters['orderId']!,
         ),
       ),
       GoRoute(

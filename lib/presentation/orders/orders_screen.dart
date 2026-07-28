@@ -131,7 +131,7 @@ class _OrderTile extends StatelessWidget {
     };
 
     return InkWell(
-      onTap: () => context.push('/order-tracking', extra: order),
+      onTap: () => context.push('/order-tracking/${order.id}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(

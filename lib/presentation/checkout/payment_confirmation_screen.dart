@@ -147,7 +147,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
 
                 // ── Suivre ma commande ──
                 FilledButton.icon(
-                  onPressed: () => context.push('/order-tracking', extra: _order),
+                  onPressed: () => context.push('/order-tracking/${_order.id}'),
                   icon: const Icon(Icons.route_rounded, size: 20),
                   label: const Text(
                     'Suivre ma commande',
