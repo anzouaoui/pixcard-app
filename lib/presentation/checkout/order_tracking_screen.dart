@@ -8,6 +8,7 @@ import 'package:pixcard/domain/entities/conversation.dart';
 import 'package:pixcard/domain/entities/dispute.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/domain/entities/order.dart';
+import 'package:pixcard/domain/entities/review.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 
@@ -50,6 +51,17 @@ final _conversationProvider = FutureProvider.autoDispose.family<Conversation?, S
         .getConversationByListing(order.listingId, [userId, order.sellerId]);
   } catch (_) {
     return null;
+  }
+});
+
+// ── Existing review provider ──
+
+final _existingReviewProvider = FutureProvider.autoDispose.family<bool, String>((ref, orderId) async {
+  try {
+    final reviews = await ref.watch(reviewRepositoryProvider).getReviewsByOrder(orderId);
+    return reviews.isNotEmpty;
+  } catch (_) {
+    return false;
   }
 });
 
@@ -227,6 +239,33 @@ class OrderTrackingScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 28),
+          ],
+
+          // ── Laisser un avis ──
+          if (!isSeller && currentOrder.status == OrderStatus.delivered) ...[
+            ref.watch(_existingReviewProvider(currentOrder.id)).when(
+              data: (hasReview) {
+                if (hasReview) return const SizedBox.shrink();
+                return Column(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _openReviewDialog(context, ref, currentOrder),
+                      icon: const Icon(Icons.rate_review_rounded),
+                      label: const Text('Laisser un avis'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
           ],
 
           // ── Back to home ──
@@ -520,6 +559,91 @@ class OrderTrackingScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Votre litige a été enregistré')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openReviewDialog(BuildContext context, WidgetRef ref, Order order) async {
+    int selectedRating = 0;
+    final commentCtrl = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Laisser un avis'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Note'),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final star = i + 1;
+                  return IconButton(
+                    onPressed: () => setDialogState(() => selectedRating = star),
+                    icon: Icon(
+                      star <= selectedRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: Colors.amber,
+                      size: 36,
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Commentaire (optionnel)',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: selectedRating == 0 ? null : () => Navigator.of(ctx).pop(true),
+              child: const Text('Envoyer'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final auth = ref.read(authStateProvider);
+    final authorId = auth.user?.id ?? '';
+
+    final review = Review(
+      id: '',
+      orderId: order.id,
+      sellerId: order.sellerId,
+      authorId: authorId,
+      rating: selectedRating,
+      comment: commentCtrl.text.trim().isEmpty ? null : commentCtrl.text.trim(),
+    );
+
+    try {
+      await ref.read(reviewRepositoryProvider).createReview(review);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Avis envoyé')),
         );
       }
     } catch (e) {

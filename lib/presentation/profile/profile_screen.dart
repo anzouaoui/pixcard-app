@@ -77,6 +77,12 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/sales'),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.star_outline_rounded),
+                  title: const Text('Avis'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/reviews/${user.id}'),
+                ),
+                ListTile(
                   leading: const Icon(Icons.favorite_outline_rounded),
                   title: const Text('Mes favoris'),
                   trailing: const Icon(Icons.chevron_right),

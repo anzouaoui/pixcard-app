@@ -68,4 +68,18 @@ class ReviewRepositoryImpl implements ReviewRepository {
             }))
         .toList();
   }
+
+  @override
+  Stream<List<Review>> watchReviewsBySeller(String sellerId) {
+    return _reviews
+        .where('sellerId', isEqualTo: sellerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Review.fromMap({
+                  'id': doc.id,
+                  ...doc.data() as Map<String, dynamic>,
+                }))
+            .toList());
+  }
 }

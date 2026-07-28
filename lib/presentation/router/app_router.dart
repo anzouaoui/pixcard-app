@@ -17,6 +17,7 @@ import 'package:pixcard/presentation/messages/messages_screen.dart';
 import 'package:pixcard/presentation/onboarding/onboarding_screen.dart';
 import 'package:pixcard/presentation/orders/orders_screen.dart' as orders;
 import 'package:pixcard/presentation/profile/profile_screen.dart';
+import 'package:pixcard/presentation/profile/reviews_screen.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/onboarding_provider.dart';
 import 'package:pixcard/presentation/scan/scan_result_screen.dart';
@@ -126,6 +127,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/favorites',
         builder: (_, _s) => const FavoritesScreen(),
+      ),
+      GoRoute(
+        path: '/reviews/:sellerId',
+        builder: (_, state) => ReviewsScreen(sellerId: state.pathParameters['sellerId']!),
       ),
     ],
   );
