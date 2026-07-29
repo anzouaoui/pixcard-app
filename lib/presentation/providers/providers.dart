@@ -8,6 +8,7 @@ import 'package:pixcard/data/repositories/offer_repository_impl.dart';
 import 'package:pixcard/data/repositories/conversation_repository_impl.dart';
 import 'package:pixcard/data/repositories/order_repository_impl.dart';
 import 'package:pixcard/data/repositories/review_repository_impl.dart';
+import 'package:pixcard/data/repositories/dispute_repository_impl.dart';
 import 'package:pixcard/domain/repositories/auth_repository.dart';
 import 'package:pixcard/domain/repositories/listing_repository.dart';
 import 'package:pixcard/domain/repositories/user_repository.dart';
@@ -15,6 +16,7 @@ import 'package:pixcard/domain/repositories/offer_repository.dart';
 import 'package:pixcard/domain/repositories/conversation_repository.dart';
 import 'package:pixcard/domain/repositories/order_repository.dart';
 import 'package:pixcard/domain/repositories/review_repository.dart';
+import 'package:pixcard/domain/repositories/dispute_repository.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 
@@ -49,4 +51,8 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
 
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
   return ReviewRepositoryImpl(ref.watch(firebaseFirestoreProvider));
+});
+
+final disputeRepositoryProvider = Provider<DisputeRepository>((ref) {
+  return DisputeRepositoryImpl(ref.watch(firebaseFirestoreProvider));
 });

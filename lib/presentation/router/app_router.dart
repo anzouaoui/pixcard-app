@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pixcard/domain/entities/listing.dart';
-import 'package:pixcard/domain/entities/order.dart' as domain;
 import 'package:pixcard/presentation/auth/forgot_password_screen.dart';
 import 'package:pixcard/presentation/auth/login_screen.dart';
 import 'package:pixcard/presentation/auth/register_screen.dart';
@@ -18,6 +17,7 @@ import 'package:pixcard/presentation/messages/messages_screen.dart';
 import 'package:pixcard/presentation/onboarding/onboarding_screen.dart';
 import 'package:pixcard/presentation/orders/orders_screen.dart' as orders;
 import 'package:pixcard/presentation/profile/profile_screen.dart';
+import 'package:pixcard/presentation/profile/reviews_screen.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 import 'package:pixcard/presentation/providers/onboarding_provider.dart';
 import 'package:pixcard/presentation/scan/scan_result_screen.dart';
@@ -111,9 +111,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/order-tracking',
+        path: '/order-tracking/:orderId',
         builder: (_, state) => OrderTrackingScreen(
-          order: state.extra as domain.Order,
+          orderId: state.pathParameters['orderId']!,
         ),
       ),
       GoRoute(
@@ -127,6 +127,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/favorites',
         builder: (_, _s) => const FavoritesScreen(),
+      ),
+      GoRoute(
+        path: '/reviews/:sellerId',
+        builder: (_, state) => ReviewsScreen(sellerId: state.pathParameters['sellerId']!),
       ),
     ],
   );

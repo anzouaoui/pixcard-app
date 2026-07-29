@@ -26,17 +26,23 @@ class FavoritesScreen extends ConsumerWidget {
                   Icon(Icons.favorite_outline_rounded, size: 64, color: cs.onSurfaceVariant),
                   const SizedBox(height: 16),
                   Text(
-                    'Aucun favori',
+                    'Aucune carte en favoris pour l\'instant',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ajoutez des annonces à vos favoris',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: const Icon(Icons.home_rounded, size: 20),
+                    label: const Text('Retour à l\'accueil'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -53,15 +59,18 @@ class FavoritesScreen extends ConsumerWidget {
             itemCount: listings.length,
             itemBuilder: (context, index) {
               final listing = listings[index];
+              final isFav = ref.watch(isListingFavoriteProvider(listing.id));
               return ListingCard(
                 listing: listing,
+                isFavorite: isFav,
                 onTap: () => context.push('/listing/${listing.id}'),
+                onToggleFavorite: () => toggleFavorite(ref, listing.id),
               );
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => Center(
+        error: (_, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

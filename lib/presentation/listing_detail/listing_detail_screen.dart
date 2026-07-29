@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:pixcard/core/constants/app_constants.dart';
 import 'package:pixcard/core/utils/extensions.dart';
 import 'package:pixcard/domain/entities/app_user.dart';
-import 'package:pixcard/domain/entities/favorite.dart';
 import 'package:pixcard/domain/entities/listing.dart';
 import 'package:pixcard/presentation/providers/providers.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
@@ -105,9 +104,9 @@ class _DetailBody extends ConsumerWidget {
             onPressed: () => Navigator.of(context).pop(),
           ),
           actions: [
-            if (!isOwnListing)
+                if (!isOwnListing)
               IconButton(
-                onPressed: () => _toggleFavorite(ref, listing.id, isFav),
+                onPressed: () => toggleFavorite(ref, listing.id),
                 icon: Icon(
                   isFav ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
                   color: isFav ? Colors.red : null,
@@ -301,17 +300,6 @@ class _DetailBody extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  void _toggleFavorite(WidgetRef ref, String listingId, bool currentlyFav) async {
-    final userId = ref.read(authStateProvider).user?.id;
-    if (userId == null) return;
-    final repo = ref.read(userRepositoryProvider);
-    if (currentlyFav) {
-      await repo.removeFavorite(userId, listingId);
-    } else {
-      await repo.addFavorite(userId, Favorite(listingId: listingId, addedAt: DateTime.now()));
-    }
   }
 
   Widget _placeholderImage(ColorScheme cs) {
