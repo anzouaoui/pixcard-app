@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pixcard/presentation/profile/edit_profile_screen.dart';
+import 'package:pixcard/presentation/profile/settings_screen.dart';
 import 'package:pixcard/presentation/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -15,6 +17,14 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mon profil'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => ref.read(authStateProvider.notifier).signOut(),
@@ -98,7 +108,11 @@ class ProfileScreen extends ConsumerWidget {
                   leading: const Icon(Icons.settings_outlined),
                   title: const Text('Paramètres'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
                 ),
               ],
             ),
