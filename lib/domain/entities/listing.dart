@@ -1,4 +1,4 @@
-enum ListingStatus { active, sold, archived }
+enum ListingStatus { active, pendingPayment, sold, archived }
 
 /// Condition de la carte — enum Firestore : neuf | near_mint | tres_bon_etat | bon_etat | jouable
 enum CardCondition {
@@ -56,7 +56,7 @@ class Listing {
       description: map['description'] as String?,
       imageUrl: map['imageUrl'] as String? ?? '',
       status: ListingStatus.values.firstWhere(
-        (e) => e.name == map['status'],
+        (e) => e.name == map['status']?.replaceAll('-', ''),
         orElse: () => ListingStatus.active,
       ),
       createdAt: map['createdAt'] != null
@@ -80,7 +80,9 @@ class Listing {
       'marketPriceAvg': marketPriceAvg,
       'description': description,
       'imageUrl': imageUrl,
-      'status': status.name,
+      'status': status == ListingStatus.pendingPayment
+          ? 'pending_payment'
+          : status.name,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
