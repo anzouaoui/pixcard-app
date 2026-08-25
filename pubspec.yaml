@@ -40,6 +40,9 @@ dependencies:
   # Payment
   flutter_stripe: ^11.4.1
 
+  # Environment
+  flutter_dotenv: ^5.2.1
+
   # Local storage
   shared_preferences: ^2.3.4
 
@@ -50,3 +53,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env
