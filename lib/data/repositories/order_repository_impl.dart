@@ -48,6 +48,21 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   @override
+  Future<Order?> getOrderByStripePaymentIntent(String stripePaymentIntentId) async {
+    final snapshot = await _orders
+        .where('stripePaymentIntentId', isEqualTo: stripePaymentIntentId)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) return null;
+
+    return Order.fromMap({
+      'id': snapshot.docs.first.id,
+      ...snapshot.docs.first.data(),
+    });
+  }
+
+  @override
   Future<List<Order>> getOrdersByBuyer(String buyerId) async {
     final snapshot = await _orders
         .where('buyerId', isEqualTo: buyerId)

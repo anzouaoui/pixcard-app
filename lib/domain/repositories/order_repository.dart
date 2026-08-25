@@ -4,6 +4,7 @@ abstract interface class OrderRepository {
   Future<Order> createOrder(Order order);
   Future<void> updateOrder(Order order);
   Future<Order> getOrderById(String id);
+  Future<Order?> getOrderByStripePaymentIntent(String stripePaymentIntentId);
   Future<List<Order>> getOrdersByBuyer(String buyerId);
   Future<List<Order>> getOrdersBySeller(String sellerId);
   Stream<List<Order>> watchOrdersByBuyer(String buyerId);

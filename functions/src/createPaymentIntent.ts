@@ -112,6 +112,9 @@ export const createPaymentIntent = onCall(
       });
     });
 
-    return { clientSecret: paymentIntent.client_secret! };
+    return {
+      clientSecret: paymentIntent.client_secret!,
+      paymentIntentId: paymentIntent.id,
+    };
   },
 );
