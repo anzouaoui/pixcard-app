@@ -36,6 +36,21 @@ final _listingProvider = FutureProvider.autoDispose.family<Listing?, String>((re
   }
 });
 
+// ── Helpers ──
+
+String formatMessageTimestamp(DateTime? dt) {
+  if (dt == null) return '';
+  final local = dt.toLocal();
+  final now = DateTime.now();
+  final sameDay = local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+  final hhmm =
+      '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  if (sameDay) return hhmm;
+  return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')} $hhmm';
+}
+
 // ── Screen ──
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -556,7 +571,7 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (message.type == MessageType.system) {
-      return _SystemBubble(text: message.text ?? '');
+      return _SystemBubble(text: message.text ?? '', createdAt: message.createdAt);
     }
     if (message.type == MessageType.offer && message.offerId != null) {
       return _OfferBubble(
@@ -564,9 +579,33 @@ class _MessageBubble extends StatelessWidget {
         isMe: isMe,
         onOfferAction: onOfferAction,
         listing: listing,
+        createdAt: message.createdAt,
       );
     }
     return _TextBubble(message: message, isMe: isMe);
+  }
+}
+
+// ── Message Timestamp ──
+
+class _MessageTimestamp extends StatelessWidget {
+  const _MessageTimestamp({this.createdAt});
+
+  final DateTime? createdAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Text(
+        formatMessageTimestamp(createdAt),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: cs.onSurfaceVariant,
+              fontSize: 10,
+            ),
+      ),
+    );
   }
 }
 
@@ -577,13 +616,6 @@ class _TextBubble extends StatelessWidget {
 
   final Message message;
   final bool isMe;
-
-  String _formatTime(DateTime? dt) {
-    if (dt == null) return '';
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -614,16 +646,7 @@ class _TextBubble extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              _formatTime(message.createdAt),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontSize: 10,
-                  ),
-            ),
-          ),
+          _MessageTimestamp(createdAt: message.createdAt),
         ],
       ),
     );
@@ -633,31 +656,37 @@ class _TextBubble extends StatelessWidget {
 // ── System Bubble ──
 
 class _SystemBubble extends StatelessWidget {
-  const _SystemBubble({required this.text});
+  const _SystemBubble({required this.text, this.createdAt});
 
   final String text;
+  final DateTime? createdAt;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.center,
+          child: Container(
+            margin: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-                fontStyle: FontStyle.italic,
-              ),
-          textAlign: TextAlign.center,
-        ),
-      ),
+        _MessageTimestamp(createdAt: createdAt),
+      ],
     );
   }
 }
@@ -670,12 +699,14 @@ class _OfferBubble extends ConsumerWidget {
     required this.isMe,
     required this.onOfferAction,
     this.listing,
+    this.createdAt,
   });
 
   final String offerId;
   final bool isMe;
   final Future<void> Function(Offer offer, OfferStatus status, Listing listing) onOfferAction;
   final Listing? listing;
+  final DateTime? createdAt;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -691,7 +722,18 @@ class _OfferBubble extends ConsumerWidget {
           );
         }
         final offer = snapshot.data!;
-        return _OfferCard(offer: offer, isMe: isMe, onOfferAction: onOfferAction, listing: listing);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _OfferCard(
+              offer: offer,
+              isMe: isMe,
+              onOfferAction: onOfferAction,
+              listing: listing,
+            ),
+            _MessageTimestamp(createdAt: createdAt),
+          ],
+        );
       },
     );
   }

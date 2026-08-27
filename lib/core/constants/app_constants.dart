@@ -1,8 +1,13 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConstants {
   AppConstants._();
 
   static const String appName = 'PixCard';
-  static const String sentryDsn = ''; // TODO: Add Sentry DSN
+
+  static String get sentryDsn => dotenv.env['SENTRY_DSN'] ?? '';
+  static String get stripePublishableKey =>
+      dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
 
   // Firestore collections
   static const String usersCollection = 'users';
