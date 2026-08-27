@@ -58,7 +58,7 @@ class OrderRepositoryImpl implements OrderRepository {
 
     return Order.fromMap({
       'id': snapshot.docs.first.id,
-      ...snapshot.docs.first.data(),
+      ...snapshot.docs.first.data() as Map<String, dynamic>,
     });
   }
 
